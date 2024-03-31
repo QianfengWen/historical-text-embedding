@@ -43,7 +43,7 @@ class BertDataset(Dataset):
         return inputs["input_ids"].squeeze(0), inputs["attention_mask"].squeeze(0), label
     
 
-def train_bert(model, dataset, batch_size, epoch_num, learning_rate, device, bert_model=None):
+def train_bert(model, dataset, batch_size, epoch_num, learning_rate, device, bert_model):
     """Train a model on a given dataset.
 
     :param model: Model to train.
@@ -54,6 +54,7 @@ def train_bert(model, dataset, batch_size, epoch_num, learning_rate, device, ber
     :param device: Device to train on ('cuda' or 'cpu').
     """
     model.to(device)
+    bert_model.to(device) 
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, collate_fn=bert_collate_fn)
@@ -86,7 +87,7 @@ def train_bert(model, dataset, batch_size, epoch_num, learning_rate, device, ber
         print(f"Epoch {epoch+1} completed, Average Loss: {total_loss / len(dataloader)}")
 
 
-def evaluate_bert(model, dataset, batch_size, device, bert_model=None):
+def evaluate_bert(model, dataset, batch_size, device, bert_model):
     """Evaluate a model on a given dataset.
 
     :param model: Model to evaluate.
@@ -97,6 +98,7 @@ def evaluate_bert(model, dataset, batch_size, device, bert_model=None):
     """
     model.eval() 
     model.to(device)
+    bert_model.to(device) 
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, collate_fn=bert_collate_fn)
 
     all_predictions, all_true_labels = [], []
