@@ -1,5 +1,6 @@
 import os, random, argparse
 from tqdm import tqdm
+from collections import Counter
 
 import numpy as np
 import pandas as pd
@@ -8,6 +9,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, Dataset, Subset
+from torch.nn.utils.rnn import pad_sequence
 from sklearn.metrics import precision_score, recall_score, accuracy_score, f1_score
 from sklearn.model_selection import KFold
 from gensim.models import FastText
@@ -65,6 +67,40 @@ def k_fold_split(dataset, k=5):
     return folds
 
 
+def build_vocab(corpus):
+    """Build the vocab from the corpus.
+    :param corpus: A list of string representing corpus.
+    """
+    tokens = Counter(token for text in corpus for token in text.split())
+    vocab = {token: idx + 2 for idx, (token, _) in enumerate(tokens.items())}
+    vocab["<pad>"] = 0
+    vocab["<unk>"] = 1
+    return vocab
+
+
+def get_embeddings(vocab, model):
+    num_tokens = len(vocab)
+    emb_size = model.wv.vector_size
+    embeddings_matrix = np.zeros((num_tokens, emb_size))
+
+    for word, idx in vocab.items():
+        if word in model.wv:
+            embeddings_matrix[idx] = model.wv[word]
+        else:
+            if word == "<unk>":
+                embeddings_matrix[idx] = np.zeros(emb_size)    
+
+    return torch.tensor(embeddings_matrix, dtype=torch.float)
+
+
+def collate_fn(batch):
+    inputs, labels = zip(*batch)
+    padded_inputs = pad_sequence(inputs, batch_first=True, padding_value=0)
+    labels = torch.stack(labels)
+
+    return padded_inputs, labels
+
+
 class TextDataset(Dataset):
     """ PyTorch Dataset for text data."""
     def __init__(self, corpus, labels, model, tokenizer=None, is_bert=False, nan_value=-1):
@@ -79,6 +115,11 @@ class TextDataset(Dataset):
         self.labels = list(self.labels)
         self.corpus = list(self.corpus)
 
+        if not self.is_bert:
+            self.max_seq_length = max(len(text.split()) for text in self.corpus)
+            self.vocab = build_vocab(self.corpus)
+            embeddings = get_embeddings(vocab=self.vocab, model=self.model)
+            self.embedding_layer = nn.Embedding.from_pretrained(embeddings, freeze=True, padding_idx=0)
 
     def __len__(self):
         return len(self.corpus)
@@ -90,34 +131,27 @@ class TextDataset(Dataset):
         if self.is_bert:
             embedding = sentence_to_bert_embeddings(text, self.model, self.tokenizer)
         else:
-            self.max_seq_length = max(len(text.split()) for text in self.corpus)
-            embedding = sentence_to_embedding(text, self.model, self.max_seq_length)
-
+            embedding = sentence_to_embedding(text, self.embedding_layer, self.vocab)
         return embedding, label
 
 
 ###### Extract Features for Word Embeddings ######
-def sentence_to_embedding(sentence, embeddings, max_seq_length):
+def sentence_to_embedding(sentence, embedding_layer, vocab, max_seq_length=512):
     """Generate embeddings for a sentence using a specified FastText model.
 
     :param sentence: Sentence to embed.
-    :param embeddings: Trained FastText model.
+    :param embedding_layer: torch.nn.Embedding, the PyTorch embedding layer used to convert indices into embeddings.
+    :param vocab: dict, a mapping from tokens (words) to indices.
     :param max_seq_length: Maximum length of the sentence for padding/truncation.
     :return: Embeddings for the sentence.
     """
+    # convert sentence to indices with padding
+    idx = [vocab.get(word, vocab["<unk>"]) for word in sentence.split()[:max_seq_length]]
+    idx_tensor = torch.tensor(idx, dtype=torch.long)
 
-    embed_dim = embeddings.vector_size
-    words = sentence.split()
-    word_embeddings = np.zeros((max_seq_length, embed_dim))
-
-    for i, word in enumerate(words):
-        try:
-            word_embeddings[i] = embeddings.wv[word]
-        # handle OOV words
-        except KeyError: 
-            word_embeddings[i] = np.zeros(embed_dim)
-
-    return torch.tensor(word_embeddings, dtype=torch.float32) #[seq_length, embed_size]
+    # apply the embedding
+    embeddings = embedding_layer(idx_tensor)
+    return embeddings
 
 
 ###### Extract Features for BERT ######
@@ -134,7 +168,7 @@ def sentence_to_bert_embeddings(sentence, model, tokenizer):
     input_ids = inputs["input_ids"]
     attention_mask = inputs['attention_mask']
 
-    # manually pad sequence length to 512
+    # # manually pad sequence length to 512
     pad_length = 512 - input_ids.size(1)
     pad_token_id = tokenizer.pad_token_id
     pad_token_tensor = torch.full((1, pad_length), pad_token_id, dtype=torch.long, device=input_ids.device)
@@ -184,7 +218,7 @@ def train(model, dataset, batch_size, epoch_num, learning_rate, device):
     model.to(device)
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
-    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
 
     for epoch in range(epoch_num):
         model.train() 
@@ -219,7 +253,7 @@ def evaluate(model, dataset, batch_size, device):
     """
     model.eval() 
     model.to(device)
-    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False, collate_fn=collate_fn)
 
     all_predictions, all_true_labels = [], []
 
@@ -306,7 +340,7 @@ def main_eval_loop(model_path, is_bert, corpus_path, label_dir, output_path, tok
                 train_dataset = Subset(dataset, train_idx)
                 val_dataset = Subset(dataset, val_idx)
                 classifier = SequenceClassifier(embed_dim, 256, num_classes).to(device)
-                train(classifier, train_dataset, batch_size=batch_size, epoch_num=5, learning_rate=0.001, device=device)
+                train(classifier, train_dataset, batch_size=batch_size, epoch_num=2, learning_rate=0.001, device=device)
                 acc, prec, recall, f1 = evaluate(classifier, val_dataset, 8, device)
                 metrics['acc'].append(acc)
                 metrics['prec'].append(prec)
@@ -354,3 +388,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
