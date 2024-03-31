@@ -136,7 +136,7 @@ class TextDataset(Dataset):
 
 
 ###### Extract Features for Word Embeddings ######
-def sentence_to_embedding(sentence, embedding_layer, vocab, max_seq_length=512):
+def sentence_to_embedding(sentence, embedding_layer, vocab, max_seq_length=256):
     """Generate embeddings for a sentence using a specified FastText model.
 
     :param sentence: Sentence to embed.
