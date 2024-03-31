@@ -23,7 +23,11 @@ if torch.cuda.is_available():
 
 
 def read_file(file_path):
-    """Reads text data from a file."""
+    """Reads text data from a file.
+    
+    :param file_path: Path to the label file.
+    :return: List of strings for each document in corpus.
+    """
     with open(file_path, "r", encoding="utf-8") as file:
         return file.readlines()
 
@@ -85,8 +89,8 @@ class SequenceClassifier(nn.Module):
         return logits
 
 
-def main_eval_loop(model_path, is_bert, corpus_path, label_dir, output_path, tokenizer_path=None, input_label=None, batch_size=8):
-    """ Perform evaluation of embeddings and models across multiple metadata labels.
+def main_eval_loop(model_path, is_bert, corpus_path, label_dir, output_path, tokenizer_path=None, input_label=None, batch_size=8, epoch=10):
+    """Perform evaluation of embeddings and models across multiple metadata labels.
     :param model_path: Path to the pre-trained model (BERT or FastText).
     :param is_bert: Flag indicating whether a BERT model is used.
     :param corpus_path: Path to the text corpus file.
@@ -94,6 +98,8 @@ def main_eval_loop(model_path, is_bert, corpus_path, label_dir, output_path, tok
     :param outputpath: Path to the output file.
     :param tokenizer_path: Path to the BERT tokenizer, required if is_bert is True.
     :param input_label: Specific label file name to use for evaluation, defaults to evaluating all labels in label_dir.
+    :param batch_size: Batch size in training, defaults to be 8.
+    :param epoch: Number of epochs to run in training, defaults to be 10.
     """
     # ---- load data and label ----
     if input_label:
@@ -153,7 +159,7 @@ def main_eval_loop(model_path, is_bert, corpus_path, label_dir, output_path, tok
                 train_dataset = Subset(dataset, train_idx)
                 val_dataset = Subset(dataset, val_idx)
                 classifier = SequenceClassifier(embed_dim, 256, num_classes).to(device)
-                train_fn(classifier, train_dataset, batch_size=batch_size, epoch_num=10, learning_rate=0.001, device=device, bert_model=model if is_bert else None)
+                train_fn(classifier, train_dataset, batch_size=batch_size, epoch_num=epoch, learning_rate=0.001, device=device, bert_model=model if is_bert else None)
                 acc, prec, recall, f1 = eval_fn(classifier, val_dataset, 8, device, bert_model=model if is_bert else None)
                 metrics['acc'].append(acc)
                 metrics['prec'].append(prec)
@@ -180,7 +186,8 @@ def main():
     parser.add_argument("-o", "--output_path", required=True, help="Output path.")
     parser.add_argument("-t", "--tokenizer_path", help="Tokenizer path (required for BERT).")
     parser.add_argument("-l", "--input_label", help="Specific label file name.")
-    parser.add_argument("--batch", type=int, default=8, help="Batch size in training")
+    parser.add_argument("--batch", type=int, default=8, help="Batch size in training.")
+    parser.add_argument("--epoch", type=int, default=10, help="Number of epoch to run in training.")
 
     args = parser.parse_args()
 
@@ -196,7 +203,8 @@ def main():
         output_path=args.output_path,
         tokenizer_path=args.tokenizer_path,
         input_label=args.input_label,
-        batch_size=args.batch
+        batch_size=args.batch,
+        epoch=args.epoch
     )
 
 if __name__ == "__main__":

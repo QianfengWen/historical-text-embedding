@@ -21,6 +21,11 @@ def build_vocab(corpus):
 
 
 def get_embeddings(vocab, model):
+    """Generate an embeddings matrix for the given vocabulary using the specified word embedding model.
+    :param vocab: dict, a mapping from tokens (words) to indices.
+    :param model: `gensim.models.keyedvectors.KeyedVectors`, the Gensim word embedding model to use for generate word embeddings.
+    :return: A 2D tensor containing the embeddings for the vocabulary.
+    """
     num_tokens = len(vocab)
     emb_size = model.wv.vector_size
     embeddings_matrix = np.zeros((num_tokens, emb_size))
@@ -36,6 +41,8 @@ def get_embeddings(vocab, model):
 
 
 def collate_fn(batch):
+    """Custom collation function for batching data.
+    """
     inputs, labels = zip(*batch)
     padded_inputs = pad_sequence(inputs, batch_first=True, padding_value=0)
     labels = torch.stack(labels)
@@ -92,12 +99,13 @@ def sentence_to_embedding(sentence, embedding_layer, vocab, max_seq_length=256):
 def train_static(model, dataset, batch_size, epoch_num, learning_rate, device, bert_model=None):
     """Train a model on a given dataset.
 
-    :param model: Model to train.
+    :param model: Classifier model to train.
     :param dataset: Dataset for training.
     :param batch_size: Batch size for training.
     :param epoch_num: Number of epochs for training.
     :param learning_rate: Learning rate for the optimizer.
     :param device: Device to train on ('cuda' or 'cpu').
+    :param bert_model: Bert model as the feature extractor, default is None, required for `train_bert` method only.
     """
     model.to(device)
     criterion = nn.CrossEntropyLoss()
@@ -129,10 +137,11 @@ def train_static(model, dataset, batch_size, epoch_num, learning_rate, device, b
 def evaluate_static(model, dataset, batch_size, device, bert_model=None):
     """Evaluate a model on a given dataset.
 
-    :param model: Model to evaluate.
+    :param model: Classifier model to evaluate.
     :param dataset: Dataset for evaluation.
     :param batch_size: Batch size for evaluation.
     :param device: Device for evaluation ('cuda' or 'cpu').
+    :param bert_model: Bert model as the feature extractor, default is None, required for `train_bert` method only.
     :return: Evaluation metrics (accuracy, precision, recall, f1).
     """
     model.eval() 

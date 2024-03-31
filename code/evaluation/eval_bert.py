@@ -10,6 +10,8 @@ from sklearn.metrics import precision_score, recall_score, accuracy_score, f1_sc
 
 
 def bert_collate_fn(batch):
+    """Custom collation function for batching data.
+    """
     input_ids, attention_masks, labels = zip(*batch)
     input_ids = pad_sequence(input_ids, batch_first=True, padding_value=0)
     attention_masks = pad_sequence(attention_masks, batch_first=True, padding_value=0)
@@ -46,12 +48,13 @@ class BertDataset(Dataset):
 def train_bert(model, dataset, batch_size, epoch_num, learning_rate, device, bert_model):
     """Train a model on a given dataset.
 
-    :param model: Model to train.
+    :param model: Classifier model to train.
     :param dataset: Dataset for training.
     :param batch_size: Batch size for training.
     :param epoch_num: Number of epochs for training.
     :param learning_rate: Learning rate for the optimizer.
     :param device: Device to train on ('cuda' or 'cpu').
+    :param device: Bert model as the feature extractor.
     """
     model.to(device)
     bert_model.to(device) 
@@ -94,6 +97,7 @@ def evaluate_bert(model, dataset, batch_size, device, bert_model):
     :param dataset: Dataset for evaluation.
     :param batch_size: Batch size for evaluation.
     :param device: Device for evaluation ('cuda' or 'cpu').
+    :param device: Bert model as the feature extractor.
     :return: Evaluation metrics (accuracy, precision, recall, f1).
     """
     model.eval() 
