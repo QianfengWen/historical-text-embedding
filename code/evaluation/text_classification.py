@@ -153,7 +153,7 @@ def main_eval_loop(model_path, is_bert, corpus_path, label_dir, output_path, tok
                 train_dataset = Subset(dataset, train_idx)
                 val_dataset = Subset(dataset, val_idx)
                 classifier = SequenceClassifier(embed_dim, 256, num_classes).to(device)
-                train_fn(classifier, train_dataset, batch_size=batch_size, epoch_num=20, learning_rate=0.001, device=device, bert_model=model if is_bert else None)
+                train_fn(classifier, train_dataset, batch_size=batch_size, epoch_num=10, learning_rate=0.001, device=device, bert_model=model if is_bert else None)
                 acc, prec, recall, f1 = eval_fn(classifier, val_dataset, 8, device, bert_model=model if is_bert else None)
                 metrics['acc'].append(acc)
                 metrics['prec'].append(prec)
