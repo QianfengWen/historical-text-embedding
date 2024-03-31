@@ -1,19 +1,17 @@
 import os, random, argparse
-from tqdm import tqdm
-from collections import Counter
 
 import numpy as np
 import pandas as pd
 
 import torch
 import torch.nn as nn
-import torch.optim as optim
-from torch.utils.data import DataLoader, Dataset, Subset
-from torch.nn.utils.rnn import pad_sequence
-from sklearn.metrics import precision_score, recall_score, accuracy_score, f1_score
+from torch.utils.data import Subset
 from sklearn.model_selection import KFold
 from gensim.models import FastText
 from transformers import BertTokenizer, BertModel
+
+from .eval_static import *
+from .eval_bert import *
 
 # set random number
 seed_value = 42  
@@ -67,124 +65,6 @@ def k_fold_split(dataset, k=5):
     return folds
 
 
-def build_vocab(corpus):
-    """Build the vocab from the corpus.
-    :param corpus: A list of string representing corpus.
-    """
-    tokens = Counter(token for text in corpus for token in text.split())
-    vocab = {token: idx + 2 for idx, (token, _) in enumerate(tokens.items())}
-    vocab["<pad>"] = 0
-    vocab["<unk>"] = 1
-    return vocab
-
-
-def get_embeddings(vocab, model):
-    num_tokens = len(vocab)
-    emb_size = model.wv.vector_size
-    embeddings_matrix = np.zeros((num_tokens, emb_size))
-
-    for word, idx in vocab.items():
-        if word in model.wv:
-            embeddings_matrix[idx] = model.wv[word]
-        else:
-            if word == "<unk>":
-                embeddings_matrix[idx] = np.zeros(emb_size)    
-
-    return torch.tensor(embeddings_matrix, dtype=torch.float)
-
-
-def collate_fn(batch):
-    inputs, labels = zip(*batch)
-    padded_inputs = pad_sequence(inputs, batch_first=True, padding_value=0)
-    labels = torch.stack(labels)
-
-    return padded_inputs, labels
-
-
-class TextDataset(Dataset):
-    """ PyTorch Dataset for text data."""
-    def __init__(self, corpus, labels, model, tokenizer=None, is_bert=False, nan_value=-1):
-        self.corpus = corpus
-        self.labels = labels
-        self.tokenizer = tokenizer
-        self.model = model
-        self.is_bert = is_bert
-
-        # filter out NaN values
-        self.corpus, self.labels = zip(*[(text, label) for text, label in zip(corpus, labels) if label != nan_value])
-        self.labels = list(self.labels)
-        self.corpus = list(self.corpus)
-
-        if not self.is_bert:
-            self.max_seq_length = max(len(text.split()) for text in self.corpus)
-            self.vocab = build_vocab(self.corpus)
-            embeddings = get_embeddings(vocab=self.vocab, model=self.model)
-            self.embedding_layer = nn.Embedding.from_pretrained(embeddings, freeze=True, padding_idx=0)
-
-    def __len__(self):
-        return len(self.corpus)
-
-    def __getitem__(self, idx):
-        text = self.corpus[idx]
-        label = torch.tensor(self.labels[idx], dtype=torch.long)
-
-        if self.is_bert:
-            embedding = sentence_to_bert_embeddings(text, self.model, self.tokenizer)
-        else:
-            embedding = sentence_to_embedding(text, self.embedding_layer, self.vocab)
-        return embedding, label
-
-
-###### Extract Features for Word Embeddings ######
-def sentence_to_embedding(sentence, embedding_layer, vocab, max_seq_length=256):
-    """Generate embeddings for a sentence using a specified FastText model.
-
-    :param sentence: Sentence to embed.
-    :param embedding_layer: torch.nn.Embedding, the PyTorch embedding layer used to convert indices into embeddings.
-    :param vocab: dict, a mapping from tokens (words) to indices.
-    :param max_seq_length: Maximum length of the sentence for padding/truncation.
-    :return: Embeddings for the sentence.
-    """
-    # convert sentence to indices with padding
-    idx = [vocab.get(word, vocab["<unk>"]) for word in sentence.split()[:max_seq_length]]
-    idx_tensor = torch.tensor(idx, dtype=torch.long)
-
-    # apply the embedding
-    embeddings = embedding_layer(idx_tensor)
-    return embeddings
-
-
-###### Extract Features for BERT ######
-def sentence_to_bert_embeddings(sentence, model, tokenizer):
-    """Generate BERT embeddings for a given sentence.
-
-    :param sentence: Sentence to embed.
-    :param model: Pretrained BERT model.
-    :param tokenizer: BERT tokenizer.
-    :return: BERT embeddings for the sentence.
-    """
-    # tokenize inputs
-    inputs = tokenizer(sentence, padding=True, truncation=True, max_length=512, return_tensors="pt")
-    input_ids = inputs["input_ids"]
-    attention_mask = inputs['attention_mask']
-
-    # # manually pad sequence length to 512
-    pad_length = 512 - input_ids.size(1)
-    pad_token_id = tokenizer.pad_token_id
-    pad_token_tensor = torch.full((1, pad_length), pad_token_id, dtype=torch.long, device=input_ids.device)
-    input_ids = torch.cat([input_ids, pad_token_tensor], dim=1) if pad_length > 0 else input_ids
-    attention_mask = torch.cat([attention_mask, torch.zeros((1, pad_length), dtype=torch.long)], dim=1) if pad_length > 0 else attention_mask
-
-    # get embeddings from the second-to-last layer
-    with torch.no_grad():
-        outputs = model(input_ids, attention_mask=attention_mask, output_hidden_states=True)
-        # Get the second-to-last layer embeddings
-        hidden_states = outputs.hidden_states
-        token_embeddings = hidden_states[-2]  # [1, seq_length, 768]
-
-    return token_embeddings.squeeze(0) # [seq_length, 768]
-
-
 class SequenceClassifier(nn.Module):
     """LSTM-based sequence classifier."""
     def __init__(self, embed_dim, hidden_dim, num_classes):
@@ -203,79 +83,6 @@ class SequenceClassifier(nn.Module):
         logits = self.fc(final)  # [batch_size, num_classes]
         
         return logits
-
-
-def train(model, dataset, batch_size, epoch_num, learning_rate, device):
-    """Train a model on a given dataset.
-
-    :param model: Model to train.
-    :param dataset: Dataset for training.
-    :param batch_size: Batch size for training.
-    :param epoch_num: Number of epochs for training.
-    :param learning_rate: Learning rate for the optimizer.
-    :param device: Device to train on ('cuda' or 'cpu').
-    """
-    model.to(device)
-    criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
-    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
-
-    for epoch in range(epoch_num):
-        model.train() 
-        total_loss = 0
-
-        progress_bar = tqdm(dataloader, desc=f"Epoch {epoch + 1}/{epoch_num}")
-
-        for inputs, labels in progress_bar:
-            inputs, labels = inputs.to(device), labels.to(device) 
-            
-            optimizer.zero_grad()
-            outputs = model(inputs)
-            loss = criterion(outputs, labels)
-            loss.backward()
-            optimizer.step()
-
-            total_loss += loss.item()
-
-            progress_bar.set_postfix({'loss': f'{total_loss / (progress_bar.last_print_n + 1):.4f}'})
-
-        print(f"Epoch {epoch+1} completed, Average Loss: {total_loss / len(dataloader)}")
-
-
-def evaluate(model, dataset, batch_size, device):
-    """Evaluate a model on a given dataset.
-
-    :param model: Model to evaluate.
-    :param dataset: Dataset for evaluation.
-    :param batch_size: Batch size for evaluation.
-    :param device: Device for evaluation ('cuda' or 'cpu').
-    :return: Evaluation metrics (accuracy, precision, recall, f1).
-    """
-    model.eval() 
-    model.to(device)
-    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False, collate_fn=collate_fn)
-
-    all_predictions, all_true_labels = [], []
-
-    with torch.no_grad():         
-        for inputs, labels in dataloader:
-            inputs, labels = inputs.to(device), labels.to(device)
-            outputs = model(inputs)
-            predictions = torch.argmax(outputs, dim=1)
-
-            all_predictions.extend(predictions.detach().cpu().numpy())
-            all_true_labels.extend(labels.detach().cpu().numpy())
-
-    # calculate evaluation metrics
-    num_classes = len(np.unique(all_true_labels))
-    avg_type = "binary" if num_classes == 2 else "macro"
-    accuracy = accuracy_score(all_true_labels, all_predictions)
-    precision = precision_score(all_true_labels, all_predictions, average=avg_type, zero_division=0)
-    recall = recall_score(all_true_labels, all_predictions, average=avg_type)
-    f1 = f1_score(all_true_labels, all_predictions, average=avg_type, zero_division=0)
-
-    print(f"Accuracy: {accuracy:.4f}, Precision: {precision:.4f}, Recall: {recall:.4f}, F1: {f1:.4f}")
-    return accuracy, precision, recall, f1
 
 
 def main_eval_loop(model_path, is_bert, corpus_path, label_dir, output_path, tokenizer_path=None, input_label=None, batch_size=8):
@@ -306,12 +113,18 @@ def main_eval_loop(model_path, is_bert, corpus_path, label_dir, output_path, tok
             model = BertModel.from_pretrained(model_path)
             tokenizer = BertTokenizer.from_pretrained(tokenizer_path or model_path)
             embed_dim = model.config.hidden_size 
+            dataset_cls = BertDataset
+            train_fn = train_bert
+            eval_fn = evaluate_bert
         except Exception as e:
             raise ValueError(f"Failed to load BERT model and tokenizer: {e}")
     else:  # Load FastText model
         try:
             model = FastText.load(model_path)
             embed_dim = model.wv.vector_size
+            dataset_cls = StaticDataset
+            train_fn = train_static
+            eval_fn = evaluate_static
         except Exception as e:
             raise ValueError(f"Failed to load FastText model: {e}")
     print(f"load the model from: {model_path}")
@@ -330,7 +143,7 @@ def main_eval_loop(model_path, is_bert, corpus_path, label_dir, output_path, tok
                 print(f"Metadata label file not found: {label_path}")
                 continue
             num_classes = len(torch.unique(labels))
-            dataset = TextDataset(corpus, labels, model, tokenizer if is_bert else None, is_bert=is_bert)
+            dataset = dataset_cls(corpus, labels, model, tokenizer if is_bert else None)
 
             # 5 fold cross validation
             metrics = {'acc': [], 'prec': [], 'recall': [], 'f1': []}
@@ -340,8 +153,8 @@ def main_eval_loop(model_path, is_bert, corpus_path, label_dir, output_path, tok
                 train_dataset = Subset(dataset, train_idx)
                 val_dataset = Subset(dataset, val_idx)
                 classifier = SequenceClassifier(embed_dim, 256, num_classes).to(device)
-                train(classifier, train_dataset, batch_size=batch_size, epoch_num=10, learning_rate=0.001, device=device)
-                acc, prec, recall, f1 = evaluate(classifier, val_dataset, 8, device)
+                train_fn(classifier, train_dataset, batch_size=batch_size, epoch_num=20, learning_rate=0.001, device=device, bert_model=model if is_bert else None)
+                acc, prec, recall, f1 = eval_fn(classifier, val_dataset, 8, device, bert_model=model if is_bert else None)
                 metrics['acc'].append(acc)
                 metrics['prec'].append(prec)
                 metrics['recall'].append(recall)
