@@ -1,6 +1,6 @@
 import argparse
-from pretrain_tokenizer import *
-from bert_embeddings import *
+from .pretrain_tokenizer import *
+from .bert_embeddings import *
 
 def main(args):
     if not os.path.exists(args.out):
