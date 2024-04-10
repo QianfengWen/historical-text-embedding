@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import Subset
 from sklearn.model_selection import KFold
-from gensim.models import FastText
+from gensim.models import KeyedVectors
 from transformers import BertTokenizer, BertModel
 
 from .eval_static import *
@@ -126,8 +126,8 @@ def main_eval_loop(model_path, is_bert, corpus_path, label_dir, output_path, tok
             raise ValueError(f"Failed to load BERT model and tokenizer: {e}")
     else:  # Load FastText model
         try:
-            model = FastText.load(model_path)
-            embed_dim = model.wv.vector_size
+            model = KeyedVectors.load_word2vec_format(model_path, binary=False)
+            embed_dim = model.vector_size
             dataset_cls = StaticDataset
             train_fn = train_static
             eval_fn = evaluate_static

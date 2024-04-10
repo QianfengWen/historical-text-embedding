@@ -27,15 +27,12 @@ def get_embeddings(vocab, model):
     :return: A 2D tensor containing the embeddings for the vocabulary.
     """
     num_tokens = len(vocab)
-    emb_size = model.wv.vector_size
+    emb_size = model.vector_size
     embeddings_matrix = np.zeros((num_tokens, emb_size))
 
     for word, idx in vocab.items():
-        if word in model.wv:
-            embeddings_matrix[idx] = model.wv[word]
-        else:
-            if word == "<unk>":
-                embeddings_matrix[idx] = np.zeros(emb_size)    
+        if word in model:
+            embeddings_matrix[idx] = model[word]
 
     return torch.tensor(embeddings_matrix, dtype=torch.float)
 
