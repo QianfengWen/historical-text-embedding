@@ -135,9 +135,10 @@ def get_word_embeddings(corpus_dir, output_dir, model_dir, tokenizer_dir, agg_me
             )
             # save word embeddings
             model_save_path = os.path.join(
-                output_dir, f"{prefix}_{model_name}_embedding.vec"
+                output_dir, f"{prefix}_{model_name}_{agg_method}.vec"
             )
             save_embeddings(model_save_path, word_embeddings_avg)
+            print(f"model saved to {output_dir}")
 
 
 if __name__ == "__main__":
