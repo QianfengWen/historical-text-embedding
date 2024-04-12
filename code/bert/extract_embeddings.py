@@ -164,4 +164,4 @@ if __name__ == "__main__":
         raise ValueError(f"Aggregation method not support: {args.agg_method}")
     os.makedirs(args.output_dir, exist_ok=True)
     
-    get_word_embeddings(args.corpus_dir, args.output_dir, args.model_dir, args.tokenizer_dir)
+    get_word_embeddings(args.corpus_dir, args.output_dir, args.model_dir, args.tokenizer_dir, args.agg_method)
