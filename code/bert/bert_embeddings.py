@@ -43,18 +43,18 @@ def train(model, output_path, data_collator, dataset, epochs):
     trainer.save_model(output_path)
 
 
-def train_BERT(model_name, input_file, output_dir, is_pretraining):
+def train_BERT(model_name, input_file, tokenizer_path, output_dir, is_pretraining):
     """
     Adapts BERT for medieval Latin corpora by further pretraining on provided text files, with customizable parameters.
 
     :param params: Dictionary containing training parameters such as batch size, learning rate, epochs, and device.
     :param model_name: Name of the BERT model to use.
     :param input_file: Path to the file containing the corpus.
-    :param output_dir: Directory to save the adapted model and tokenizer.
+    param tokenizer_path: Directory to load the trained tokenizer model. 
+    :param output_dir: Directory to save the adapted model.
     :param is_pretraining: A boolean flag indicating whether the task is pretraining. If `True`, the model will be trained from scratch If `False`, the model will be fine-tuned.
     """
     # load pretrained tokenizer
-    tokenizer_path = os.path.join(output_dir, "pretrained-tokenizer")
     try:
         tokenizer = BertTokenizerFast.from_pretrained(tokenizer_path)
     except Exception as e:
