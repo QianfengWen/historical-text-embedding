@@ -3,8 +3,7 @@ from .pretrain_tokenizer import *
 from .bert_embeddings import *
 
 def main(args):
-    if not os.path.exists(args.out):
-        os.makedirs(args.out)
+    os.makedirs(args.out, exist_ok=True)
 
     if not os.path.isfile(args.input):
         raise FileNotFoundError(f"Input corpus file not found at {args.input}")

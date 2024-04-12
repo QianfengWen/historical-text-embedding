@@ -63,7 +63,8 @@ def train_BERT(model_name, input_file, tokenizer_path, output_dir, is_pretrainin
     # process corpora
     corpus = list(read_corpus(input_file))
     chunks = [chunk for doc in corpus for chunk in chunk_text(doc, tokenizer)]
-    
+    print(f"Reading corpus from : {input_file}, # of charters: {len(corpus)}")
+
     tokenized = tokenizer(
         chunks,
         add_special_tokens=True,
