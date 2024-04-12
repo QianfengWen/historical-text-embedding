@@ -84,9 +84,9 @@ def seq_to_token_embeddings(corpus, model, tokenizer, device, agg_method):
     if agg_method == "mean":
         word_embeddings_result = {word: np.mean(np.array(word_embeddings_sum[word]),axis=0) for word in word_embeddings_sum}
     elif agg_method == "min":
-        word_embeddings_result = {word: np.min(np.array(word_embeddings_sum[word], axis=0)) for word in word_embeddings_sum}
+        word_embeddings_result = {word: np.min(np.array(word_embeddings_sum[word]), axis=0) for word in word_embeddings_sum}
     elif agg_method == "max":
-        word_embeddings_result = {word: np.max(np.array(word_embeddings_sum[word], axis=0)) for word in word_embeddings_sum}
+        word_embeddings_result = {word: np.max(np.array(word_embeddings_sum[word]), axis=0) for word in word_embeddings_sum}
     return word_embeddings_result
 
 
