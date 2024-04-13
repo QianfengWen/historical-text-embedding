@@ -7,6 +7,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import Subset
 from sklearn.model_selection import KFold
+from sklearn.model_selection import StratifiedKFold
 from gensim.models import KeyedVectors
 from transformers import BertTokenizer, BertModel
 
@@ -52,17 +53,14 @@ def k_fold_split(dataset, k=5):
     :param k: Number of folds, defaults to 5.
     :return: List of tuples containing train and validation datasets for each fold.
     """
-    indices = torch.randperm(len(dataset)).tolist()
+    labels = dataset.labels
     
-    fold_sizes = len(dataset) // k
+    skf = StratifiedKFold(n_splits=k, shuffle=True, random_state=42)
     folds = []
     
-    for i in range(k):
-        val_idx = indices[i*fold_sizes : (i+1)*fold_sizes]
-        train_idx = indices[:i*fold_sizes] + indices[(i+1)*fold_sizes:]
-        
-        val_dataset = dataset[val_idx]
-        train_dataset = dataset[train_idx]
+    for train_idx, val_idx in skf.split(range(len(dataset)), labels):
+        train_dataset = Subset(dataset, train_idx)
+        val_dataset = Subset(dataset, val_idx)
         
         folds.append((train_dataset, val_dataset))
     
@@ -153,11 +151,9 @@ def main_eval_loop(model_path, is_bert, corpus_path, label_dir, output_path, tok
 
             # 5 fold cross validation
             metrics = {'acc': [], 'prec': [], 'recall': [], 'f1': []}
-            kf = KFold(n_splits=5)
-            for i, (train_idx, val_idx) in enumerate(kf.split(dataset)):
-                print(f"evaluate metadata: {file_name}, fold {i + 1}/5")
-                train_dataset = Subset(dataset, train_idx)
-                val_dataset = Subset(dataset, val_idx)
+            folds = k_fold_split(dataset, k=5)
+            for i, (train_dataset, val_dataset) in enumerate(folds):
+                print(f"evaluate metadata: {file_name}, fold {i + 1}/5, label proportion: {sum(train_dataset.labels) / len(train_dataset.labels)}")
                 classifier = SequenceClassifier(embed_dim, 256, num_classes).to(device)
                 train_fn(classifier, train_dataset, batch_size=batch_size, epoch_num=epoch, learning_rate=0.001, device=device, bert_model=model if is_bert else None)
                 acc, prec, recall, f1 = eval_fn(classifier, val_dataset, 8, device, bert_model=model if is_bert else None)
