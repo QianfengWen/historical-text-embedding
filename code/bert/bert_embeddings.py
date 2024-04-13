@@ -25,8 +25,7 @@ def train(model, output_path, data_collator, dataset, epochs):
         per_device_train_batch_size=8,
         gradient_accumulation_steps=8,
         per_device_eval_batch_size=8,
-        save_strategy="epoch",
-        load_best_model_at_end=True
+        save_strategy="epoch"
     )  
     
     # define trainer
