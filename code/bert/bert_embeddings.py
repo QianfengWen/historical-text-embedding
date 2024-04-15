@@ -24,7 +24,6 @@ def train(model, output_path, data_collator, dataset, epochs):
         num_train_epochs=epochs, # 4 for fine-tune; 10 for pretrain
         per_device_train_batch_size=8,
         gradient_accumulation_steps=8,
-        per_device_eval_batch_size=8,
         save_strategy="epoch"
     )  
     
@@ -79,9 +78,9 @@ def train_BERT(model_name, input_file, tokenizer_path, output_dir, is_pretrainin
         # pre-train BERT from scratch
         config = BertConfig(
             vocab_size=32_000,
-            hidden_size=300, #768,
-            num_hidden_layers=4, #12,
-            num_attention_heads=4, #12,
+            hidden_size=768,
+            num_hidden_layers=12,
+            num_attention_heads=12,
             max_position_embeddings=512,
         )
         print("pre-train BERT model...")
