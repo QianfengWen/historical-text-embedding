@@ -15,7 +15,8 @@ def read_corpus(file_path):
 def train_fasttext(file_path="inputs/AllStandText", 
                    output_dir="outputs/", 
                    model_path="fasttext.model",
-                   vecsize = 100):
+                   vecsize = 100,
+                   epochs=30):
     """
     Train the  `fastText` subword model from scratch.
     """
@@ -30,7 +31,7 @@ def train_fasttext(file_path="inputs/AllStandText",
         'ns_exponent': 0.75, 
         'alpha': 0.025,  
         'min_alpha': 0.0001,  
-        'epochs': 30,
+        'epochs': epochs,
         'sample': 1e-3, 
         'min_n': 5, 
         'max_n': 5, 
@@ -68,19 +69,27 @@ def continue_train(pre_trained_path="outputs/all_fasttext.model",
     model.save(merged_model_path)
 
 
-def run_all_then_respective(vecsize=100):
+def run_adapt(vecsize=100, epochs=30):
     '''
     a wrapper function to run training based on all text and then continue training based on ang and eng text.
     '''
-    all_model_path = f"all_fasttext_{vecsize}.model"
-    all_pretrained_path = f"outputs/all_fasttext_{vecsize}.model"
-    ang_model_path = f"ang_adapt_{vecsize}.model"
-    eng_model_path = f"eng_adapt_{vecsize}.model"
-    train_fasttext(file_path="inputs/Alltext", output_dir="outputs/", model_path=all_model_path, vecsize=vecsize)
+    all_model_path = f"all_fasttext_{vecsize}_e{epochs}.model"
+    all_pretrained_path = f"outputs/adapt_{vecsize}_e{epochs}/all_fasttext_{vecsize}_e{epochs}.model"
+    ang_model_path = f"ang_adapt_{vecsize}_e{epochs}.model"
+    eng_model_path = f"eng_adapt_{vecsize}_e{epochs}.model"
+    train_fasttext(file_path="inputs/BaseText", 
+                   output_dir=f"outputs/adapt_{vecsize}_e{epochs}/", 
+                   model_path=all_model_path, 
+                   vecsize=vecsize, 
+                   epochs=epochs)
     continue_train(pre_trained_path=all_pretrained_path,
-        file_path="inputs/AngStandText", output_dir="outputs/", model_path=ang_model_path)
+                   file_path="inputs/AngStandText", 
+                   output_dir=f"outputs/adapt_{vecsize}_e{epochs}/", 
+                   model_path=ang_model_path)
     continue_train(pre_trained_path=all_pretrained_path,
-                   file_path="inputs/EngStandText", output_dir="outputs/", model_path=eng_model_path)
+                   file_path="inputs/EngStandText", 
+                   output_dir=f"outputs/adapt_{vecsize}_e{epochs}/", 
+                   model_path=eng_model_path)
     
 def run_157(vecsize=100):
     '''
@@ -129,4 +138,8 @@ if __name__ == "__main__":
     #convert_to_vec(model_path="outputs/ang_157_100.model")
     #convert_to_vec(model_path="outputs/eng_157_300.model")
     #convert_to_vec(model_path="outputs/ang_157_300.model")
-    eval()
+    #convert_to_vec(model_path="outputs/adapt_100_e50/ang_adapt_100_e50.model")
+    #convert_to_vec(model_path="outputs/adapt_100_e50/eng_adapt_100_e50.model")
+    run_adapt(vecsize=300, epochs=30)
+    #convert_to_vec(model_path="outputs/adapt_300_e50/ang_adapt_300_e50.model")
+    #convert_to_vec(model_path="outputs/adapt_300_e50/eng_adapt_300_e50.model")

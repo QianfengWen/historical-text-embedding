@@ -1,229 +1,85 @@
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-import nltk
+from Levenshtein import ratio
 from tqdm import tqdm
-from nltk.tokenize import word_tokenize
-from Levenshtein import ratio, distance
-from itertools import product
+import random
 from collections import Counter
 
-AngTextPath = 'data/AngOrdtext'
-EngTextPath = 'data/EngOrdtext'
-FrTextPath = 'data/FrOrdtext'
-
-def read_words(filepath):
+def get_unique_words(filepath):    
     '''
-    return a list of words
-    each word is a string
-    '''    
-    text = []
-    for line in open(filepath):
-        words = line.split()
-        sentence = [word for word in words]
-        text.extend(sentence)
-    word_map2 = {'æ': 'e', 'ae': 'e', 'ð': 'th', 'þ': 'th'}
-    for old, new in word_map2.items():
-        text = [word.replace(old, new) for word in text]
-    return text
-
-def read_sentences(filepath):  
+    Read a file and return a set of unique words
     '''
-    return a list of sentences
-    each sentence is a string
-    ''' 
-    sentences = []
-    for line in open(filepath):
-        words = line.split()
-        sentence = ' '.join(words)
-        word_map2 = {'æ': 'e', 'ae': 'e', 'ð': 'th', 'þ': 'th'}
-        for old, new in word_map2.items():
-            sentence = sentence.replace(old, new)
-        sentences.append(sentence)
-    return sentences
-
-def get_rank_frequency(all_words):
-    word_frequency = Counter(all_words)
-    word_frequency = dict(sorted(word_frequency.items(), key=lambda item: item[1], reverse=True))
-    word_frequency = pd.DataFrame(list(word_frequency.items()), columns=['Word', 'Frequency'])
-    return word_frequency
-
-def max_similarity(text1, text2):
-    """
-    return normalized levenshtein similarity between two strings
-    """
-    if type(text1) != str:
-        text1 = str(text1)
-    if type(text2) != str:
-        text2 = str(text2)
-    return 1 - distance(text1, text2) / max(len(text1), len(text2))
-
-def similarity_report(distinct_word_list, threshold=0.85, desc='Calculating similarity'):
-    '''
-    takes a list of distinct words,
-    returns a dataframe with combinations with similarity score higher than 0.85
-    '''
-    pbar = tqdm(total=len(distinct_word_list), desc=desc)
-    dfs = []
-    for word1 in distinct_word_list:
-        for word2 in distinct_word_list:
-            similarity = max_similarity(word1, word2)
-            if 1 > similarity > threshold:
-                df = pd.DataFrame({'Word1': [word1], 'Word2': [word2], 'Similarity': [similarity]})
-                dfs.append(df)
-        pbar.update(1)
-    pbar.close()
-    if len(dfs) == 0:
-        return pd.DataFrame()
-    df = pd.concat(dfs, ignore_index=True)
-    return df
-
-def similarity_summary(df, desc = 'Grouping similar words'):
-    '''
-    takes a dataframe with word1 and word2 that are similar,
-    returns a dataframe with groups of similar words
-    '''
-    if df.empty:
-        return pd.DataFrame()
-    groups = []
-    explored = set()
-    pbar = tqdm(total=len(df['Word1']), desc=desc)
-    for word1 in df['Word1']:
-        if word1 not in explored:
-            group = [word1]
-            explored.add(word1)
-            word2 = df[df['Word1'] == word1]['Word2']
-            group.extend(word2)
-            for w in word2:
-                explored.add(w)
-            groups.append(group)
-        pbar.update(1)
-    pbar.close()
-    summary_df = pd.DataFrame({'Group': range(1, len(groups)+1), 'Words': [' '.join(group) for group in groups]})
-    return summary_df
-
-def summary_to_dict(all_words_frequency, summary_df):
-    '''
-    from a group of words whose similarity score is higher than 0.9 and frequency is higher than 5,
-    we keep the word with highest frequency
-    '''
-    summary = summary_df['Words'].str.split(' ').tolist()
-    summary_dict = {}
-    pbar = tqdm(total=len(summary))
-    for group in summary:
-        max_word = ''
-        max_freq = -1
-        for word in group:
-            freq = all_words_frequency[all_words_frequency['Word'] == word]['Frequency'].values[0]
-            if freq > max_freq:
-                max_freq = freq
-                max_word = word
-        for word in group:
-            if word != max_word:
-                summary_dict[word] = max_word
-        pbar.update(1)
-    pbar.close()
-    return summary_dict
-
-def standardize_p1():
-    '''
-    get similarity summaries for two thresholds, 0.85 and 0.90
-    '''
-    ang_text = read_words(AngTextPath)
-    eng_text = read_words(EngTextPath)
-    fr_text = read_words(FrTextPath)
-    all_words = ang_text + eng_text + fr_text
-    word_frequency = get_rank_frequency(all_words)
-    word_frequency.to_csv('experiments/result_2/word_frequency.txt', index=False)
-    distinct_word_list = word_frequency['Word']
-    similarity_df_085 = similarity_report(distinct_word_list, threshold=0.85)
-    similarity_df_085.to_csv('experiments/result_2/similarity_df_085.txt', index=False)
-    similarity_df_090 = similarity_df_085[similarity_df_085['Similarity'] > 0.90]
-    similarity_summary_df_085 = similarity_summary(similarity_df_085)
-    similarity_summary_df_090 = similarity_summary(similarity_df_090)
-    similarity_summary_df_085.to_csv('experiments/result_2/similarity_summary_df_085.txt', index=False)
-    similarity_summary_df_090.to_csv('experiments/result_2/similarity_summary_df_090.txt', index=False)
-
-
-def standardize_p2():
-    '''
-    combine the two similarity summary dataframes
-    for scarce words with frequency not greater than 5, 
-        we keep the word with highest frequency according to 0.85 threshold
-    for words with frequency greater than 5,
-        we keep the word with highest frequency according to 0.90 threshold
-    '''
-    word_frequency = pd.read_csv('experiments/result_2/word_frequency.txt')
-    similarity_summary_df_085 = pd.read_csv('experiments/result_2/similarity_summary_df_085.txt')
-    similarity_summary_df_090 = pd.read_csv('experiments/result_2/similarity_summary_df_090.txt')
-    summary_dict_085 = summary_to_dict(word_frequency, similarity_summary_df_085)
-    summary_dict_090 = summary_to_dict(word_frequency, similarity_summary_df_090)
-    summary_dict_085 = pd.DataFrame(list(summary_dict_085.items()), columns=['Word', 'Replacement'])
-    summary_dict_085.to_csv('experiments/result_2/summary_dict_085.txt', index=False)
-    summary_dict_090 = pd.DataFrame(list(summary_dict_090.items()), columns=['Word', 'Replacement'])
-    summary_dict_090.to_csv('experiments/result_2/summary_dict_090.txt', index=False)
-
-def standardize_p3():
-    '''
-    '''
-    word_frequency = pd.read_csv('experiments/result_2/word_frequency.txt')
-    summary_dict_085 = pd.read_csv('experiments/result_2/summary_dict_085.txt')
-    summary_dict_090 = pd.read_csv('experiments/result_2/summary_dict_090.txt')
-    summary_dict_combined = {}
-    pb = tqdm(total=len(word_frequency['Word']))
-    for word in word_frequency['Word']:
-        temp = word_frequency[word_frequency['Word'] == word]['Frequency'].values
-        if len(temp) == 0:
-            continue
-        freq = temp[0]
-        if freq > 5:
-            replacement = summary_dict_090[summary_dict_090['Word'] == word]['Replacement'].values
-            if len(replacement) > 0:
-                summary_dict_combined[word] = replacement[0]
-        else:
-            replacement = summary_dict_085[summary_dict_085['Word'] == word]['Replacement'].values
-            if len(replacement) > 0:
-                summary_dict_combined[word] = replacement[0]
-        pb.update(1)
-    pb.close()
-    summary_dict_combined = pd.DataFrame(list(summary_dict_combined.items()), columns=['Word', 'Replacement'])
-    summary_dict_combined.to_csv('experiments/result_2/summary_dict_combined.txt', index=False)
-
-def standardize_p4_helper(textpath, summary_dict_combined):
-    text = read_sentences(textpath)
-    pbar = tqdm(total=len(text))
-    for i, sentence in enumerate(text):
-        for old, new in summary_dict_combined.items():
-            sentence = sentence.replace(old, new)
-        text[i] = sentence
-        pbar.update(1)
-    pbar.close()
-    return pd.DataFrame(text)
-
-def standardize_p4():
-    stand_path = 'experiments/standardized_data_d5'
-    summary_dict_combined = pd.read_csv('experiments/result_2/summary_dict_combined.txt')
-    summary_dict_combined = dict(zip(summary_dict_combined['Word'], summary_dict_combined['Replacement']))
-
-    ang_text_df = standardize_p4_helper(AngTextPath, summary_dict_combined)
-    eng_text_df = standardize_p4_helper(EngTextPath, summary_dict_combined)
-    fr_text_df = standardize_p4_helper(FrTextPath, summary_dict_combined)
-    print('Merging')
-    all_text = pd.concat([ang_text_df, eng_text_df, fr_text_df], ignore_index=True)
-    print('Saving')
-    all_text.to_csv(stand_path + '/AllStandText', index=False, header=False)
-    ang_text_df.to_csv(stand_path + '/AngStandText', index=False, header=False)
-    eng_text_df.to_csv(stand_path + '/EngStandText', index=False, header=False)
-    fr_text_df.to_csv(stand_path + '/FrStandText', index=False, header=False)
-
-
-def standardize_evaluation():
-    all_text = read_words('experiments/standardized_data_d5/AllStandText')
-    all_rf = get_rank_frequency(all_text)
-    print(all_rf.head(10))
-    print(len(all_rf))
+    with open(filepath, "r") as f:
+        lines = f.readlines()
+        return {word for line in lines for word in line.split()}
     
+def standardize_letters(sentence):
+    '''
+    Standardize letters in a sentence
+    '''
+    # replace other letters
+    word_map2 = {'æ': 'e', 'ae': 'e', 'ð': 'th', 'þ': 'th'}
+    new_sentence = []
+    for word in sentence:
+        new_word = word
+        for letter in new_word: 
+            if letter in word_map2:
+                new_word = new_word.replace(letter, word_map2[letter])
+        new_sentence.append(new_word)
+    return new_sentence
+    
+def get_freq(filepath):
+    '''
+    Get frequency of words in a file
+    '''
+    with open(filepath, "r") as f:
+        lines = f.readlines()
+        return Counter([word for line in lines for word in standardize_letters(line.split())])
 
-if __name__ == '__main__':
-    standardize_evaluation()
+def find_similar_words(scarce, not_scarce):
+    '''
+    Return a dictionary of format {scarce_word: most_similar_and_not_scarce_word}
+    '''
+    normal = {}
+    for word in tqdm(scarce):
+        max_word = max(not_scarce, key=lambda x: ratio(word, x))
+        max_sim = ratio(word, max_word)
+        if max_sim > 0.85:
+            normal[word] = max_word
+    return normal
+
+def stand(input_file, dict_file, output_file):
+    '''
+    Standardize the text in a file
+    '''
+    freq = get_freq(input_file)
+    scarce = {word for word in freq if freq[word] < 5}
+    not_scarce = {word for word in freq if freq[word] >= 5}
+    dict = find_similar_words(scarce, not_scarce)
+    with open(dict_file, "w") as file:
+        for key, value in dict.items():
+            file.write(f"{key}:{value}\n")
+    with open(input_file, "r") as f:
+        lines = f.readlines()
+        with open(output_file, "w") as out:
+            for line in lines:
+                words = standardize_letters(line.split())
+                new_line = []
+                for word in words:
+                    if word in dict:
+                        new_line.append(dict[word])
+                    else:
+                        new_line.append(word)
+                out.write(" ".join(new_line) + "\n")
+    
+def combine_files(file1, file2, output_file):
+    '''
+    combine two files into one
+    '''
+    with open(file1, "r") as f1, \
+            open(file2, "r") as f2, \
+            open(output_file, "w") as out:
+        
+        out.write(f1.read() + "\n" + f2.read())
+
+if __name__ == "__main__":
+    stand('data/AngOrdtext','experiments/result/AngDict', 'experiments/result/AngStandText')
+    stand('data/EngOrdtext','experiments/result/EngDict' ,'experiments/result/EngStandText')
