@@ -1,10 +1,7 @@
 import os
-import io
 from gensim.models import FastText
 from tqdm import tqdm
 import numpy as np
-from tqdm import tqdm
-#from gensim.models.fasttext_bin import load
 from gensim.models import KeyedVectors
 
 def read_corpus(file_path):
@@ -15,7 +12,7 @@ def read_corpus(file_path):
 def train_fasttext(file_path="inputs/AllStandText", 
                    output_dir="outputs/", 
                    model_path="fasttext.model",
-                   vecsize = 100,
+                   vecsize=100,
                    epochs=30):
     """
     Train the  `fastText` subword model from scratch.
@@ -43,6 +40,8 @@ def train_fasttext(file_path="inputs/AllStandText",
 
     print("model trained")
     merged_model_path = os.path.join(output_dir, model_path)
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
     model.save(merged_model_path)
     print("model saved")
 
@@ -66,6 +65,8 @@ def continue_train(pre_trained_path="outputs/all_fasttext.model",
     model.build_vocab(corpus, update=True)
     model.train(corpus, total_examples=len(corpus), epochs=30)
     merged_model_path = os.path.join(output_dir, model_path)
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
     model.save(merged_model_path)
 
 
