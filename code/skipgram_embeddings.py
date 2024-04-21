@@ -3,6 +3,7 @@ from gensim.models import FastText
 from tqdm import tqdm
 import numpy as np
 from gensim.models import KeyedVectors
+import argparse
 
 def read_corpus(file_path):
     with open(file_path) as f:
@@ -70,38 +71,40 @@ def continue_train(pre_trained_path="outputs/all_fasttext.model",
     model.save(merged_model_path)
 
 
-def run_adapt(vecsize=100, epochs=30):
+def run_internal(vecsize=100, epochs=30):
     '''
     a wrapper function to run training based on all text and then continue training based on ang and eng text.
     '''
     all_model_path = f"all_fasttext_{vecsize}_e{epochs}.model"
-    all_pretrained_path = f"outputs/adapt_{vecsize}_e{epochs}/all_fasttext_{vecsize}_e{epochs}.model"
-    ang_model_path = f"ang_adapt_{vecsize}_e{epochs}.model"
-    eng_model_path = f"eng_adapt_{vecsize}_e{epochs}.model"
+    all_pretrained_path = f"outputs/internal_{vecsize}_e{epochs}/all_fasttext_{vecsize}_e{epochs}.model"
+    ang_model_path = f"ang_internal_{vecsize}_e{epochs}.model"
+    eng_model_path = f"eng_internal_{vecsize}_e{epochs}.model"
     train_fasttext(file_path="inputs/BaseText", 
-                   output_dir=f"outputs/adapt_{vecsize}_e{epochs}/", 
+                   output_dir=f"outputs/internal_{vecsize}_e{epochs}/", 
                    model_path=all_model_path, 
                    vecsize=vecsize, 
                    epochs=epochs)
     continue_train(pre_trained_path=all_pretrained_path,
                    file_path="inputs/AngStandText", 
-                   output_dir=f"outputs/adapt_{vecsize}_e{epochs}/", 
+                   output_dir=f"outputs/internal_{vecsize}_e{epochs}/", 
                    model_path=ang_model_path)
     continue_train(pre_trained_path=all_pretrained_path,
                    file_path="inputs/EngStandText", 
-                   output_dir=f"outputs/adapt_{vecsize}_e{epochs}/", 
+                   output_dir=f"outputs/internal_{vecsize}_e{epochs}/", 
                    model_path=eng_model_path)
+    return ang_model_path, eng_model_path
     
-def run_157(vecsize=100):
+def run_external(vecsize=100):
     '''
     a wrapper function to run continue training based on fasttext latin model.
     '''
     continue_train(pre_trained_path=f"pretrained_vec/cc.la.{vecsize}.bin",
-                   file_path="inputs/AngStandText", output_dir="outputs/", model_path=f"ang_157_{vecsize}.model")
+                   file_path="inputs/AngStandText", output_dir="outputs/", model_path=f"ang_external_{vecsize}.model")
     continue_train(pre_trained_path=f"pretrained_vec/cc.la.{vecsize}.bin",
-                   file_path="inputs/EngStandText", output_dir="outputs/", model_path=f"eng_157_{vecsize}.model")
+                   file_path="inputs/EngStandText", output_dir="outputs/", model_path=f"eng_external_{vecsize}.model")
+    return f"outputs/ang_external_{vecsize}.model", f"outputs/eng_external_{vecsize}.model"
 
-def convert_to_vec(model_path="outputs/ang_157_100.model"):
+def convert_to_vec(model_path="outputs/ang_external_100.model"):
     '''
     Convert the model to vec format for evaluation.
     '''
@@ -109,8 +112,8 @@ def convert_to_vec(model_path="outputs/ang_157_100.model"):
     output_path = model_path.replace(".model", ".vec")
     model.wv.save_word2vec_format(output_path, binary=False)
 
-def eval(model_0_path="outputs/eng_adapt_100.vec", 
-         model_1_path="outputs/ang_adapt_100.vec", 
+def eval(model_0_path="outputs/eng_internal_100.vec", 
+         model_1_path="outputs/ang_internal_100.vec", 
          word="domino"):
     '''
     A simple evaluation function to check if the word is in the model and if the embeddings are the same.
@@ -131,16 +134,16 @@ def eval(model_0_path="outputs/eng_adapt_100.vec",
     
     
 if __name__ == "__main__":
-    #convert_to_vec(model_path="outputs/eng_adapt_100.model")
-    #convert_to_vec(model_path="outputs/ang_adapt_100.model")
-    #convert_to_vec(model_path="outputs/eng_adapt_300.model")
-    #convert_to_vec(model_path="outputs/ang_adapt_300.model")
-    #convert_to_vec(model_path="outputs/eng_157_100.model")
-    #convert_to_vec(model_path="outputs/ang_157_100.model")
-    #convert_to_vec(model_path="outputs/eng_157_300.model")
-    #convert_to_vec(model_path="outputs/ang_157_300.model")
-    #convert_to_vec(model_path="outputs/adapt_100_e50/ang_adapt_100_e50.model")
-    #convert_to_vec(model_path="outputs/adapt_100_e50/eng_adapt_100_e50.model")
-    run_adapt(vecsize=300, epochs=30)
-    #convert_to_vec(model_path="outputs/adapt_300_e50/ang_adapt_300_e50.model")
-    #convert_to_vec(model_path="outputs/adapt_300_e50/eng_adapt_300_e50.model")
+    parser = argparse.ArgumentParser(description='Train and evaluate FastText embeddings.')
+    parser.add_argument('--vecsize', type=int, default=100, help='Size of the vector embeddings.')
+    parser.add_argument('--epochs', type=int, default=30, help='Number of epochs for training.')
+    parser.add_argument('--internal', default=False, help='Whether to run internal initialization training.')
+    args = parser.parse_args()
+    if args.internal:
+        mp1, mp2 = run_internal(vecsize=args.vecsize, epochs=args.epochs)
+    else:
+        mp1, mp2 = run_external(vecsize=args.vecsize)
+    convert_to_vec(mp1)
+    convert_to_vec(mp2)
+
+

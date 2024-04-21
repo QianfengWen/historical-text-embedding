@@ -2,6 +2,7 @@ from Levenshtein import ratio
 from tqdm import tqdm
 import random
 from collections import Counter
+import argparse
 
 def get_unique_words(filepath):    
     '''
@@ -46,7 +47,7 @@ def find_similar_words(scarce, not_scarce):
             normal[word] = max_word
     return normal
 
-def stand(input_file, dict_file, output_file):
+def original_to_dict(input_file, dict_file):
     '''
     Standardize the text in a file
     '''
@@ -57,6 +58,15 @@ def stand(input_file, dict_file, output_file):
     with open(dict_file, "w") as file:
         for key, value in dict.items():
             file.write(f"{key}:{value}\n")
+
+
+def dict_to_standard(input_file, dict_file, output_file):
+    with open(dict_file, "r") as f:
+        lines = f.readlines()
+        dict = {}
+        for line in lines:
+            key, value = line.split(":")
+            dict[key] = value.strip()
     with open(input_file, "r") as f:
         lines = f.readlines()
         with open(output_file, "w") as out:
@@ -81,5 +91,14 @@ def combine_files(file1, file2, output_file):
         out.write(f1.read() + "\n" + f2.read())
 
 if __name__ == "__main__":
-    stand('data/AngOrdtext','experiments/result/AngDict', 'experiments/result/AngStandText')
-    stand('data/EngOrdtext','experiments/result/EngDict' ,'experiments/result/EngStandText')
+    parser = argparse.ArgumentParser(description='Standardize the text in a file.')
+    parser.add_argument('-i', type=str, help='Path to the input file.')
+    parser.add_argument('-d', type=str, help='Path to the dictionary file.')
+    parser.add_argument('-o', type=str, help='Path to the second output file.')
+
+    args = parser.parse_args()
+    original_to_dict(args.i, args.d) 
+    dict_to_standard(args.i, args.d, args.o)
+    # stand('data/AngOrdtext','experiments/result/AngDict', 'experiments/result/AngStandText')
+    # stand('data/EngOrdtext','experiments/result/EngDict' ,'experiments/result/EngStandText')
+    
