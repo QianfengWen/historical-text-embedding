@@ -8,12 +8,23 @@ This project is dedicated to adapting various models, such as FastText and BERT,
 
 The project includes the training and adaptation of models, evaluation of model performance, and a example semantic change detection analysis.
 
+### Standardization
+
+For standardizing Anglo-Saxon period corpora:
+
+```bash
+python code/standardization.py -i data/AngOrdtext -d result/AngDict -o result/AngStandText
+```
+
 ### Adapt Models and Extract Embeddings
 
 #### FastText Embeddings
 
-For FastText model adaptation and embedding extraction:
+For FastText model adaptation and embedding extraction: use `--internal` for internal embedding.
 
+```bash
+python code/skipgram_embeddings.py --vecsize 300 --epochs 50 --internal
+```
 
 #### Adapt BERT Models
 
@@ -54,4 +65,3 @@ To extrinsically evaluate models on text classification tasks, use the `text_cla
   ```bash
   python code/evaluation/text_classification.py -m path/to/model -c path/to/corpus.txt -ld path/to/label_dir -o path/to/output -l specific_label_file_name.txt
   ```
-

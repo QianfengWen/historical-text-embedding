@@ -4,6 +4,12 @@ PyWS
 # Data
 inputs
 
+# macOS
+.DS_Store
+
+# Trained Model
+experiments/trained_model/*.bin
+
 # Experiments
 experiments
 
@@ -12,6 +18,7 @@ models
 dataset
 
 inputs
+
 
 # other outputs
 outputs
