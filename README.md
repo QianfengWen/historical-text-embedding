@@ -2,16 +2,12 @@
 
 Standardization usage
 
-For standardizing Ang
+For standardizing Anglo-Saxon period corpora
 ```bash
-python code/standardization.py -i data/AngOrdtext -d experiments/result/AngDict -o experiments/result/AngStandText
-```
-For standardizing Eng
-```bash
-python code/standardization.py -i data/EngOrdtext -d experiments/result/EngDict -o experiments/result/EngStandText
+python code/standardization.py -i data/AngOrdtext -d result/AngDict -o result/AngStandText
 ```
 
-For static model
+For static model, use `--internal` for internal embedding.
 ```bash
 python code/skipgram_embeddings.py --vecsize 300 --epochs 50 --internal
 ```

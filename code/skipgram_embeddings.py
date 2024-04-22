@@ -110,28 +110,7 @@ def convert_to_vec(model_path="outputs/ang_external_100.model"):
     '''
     model = FastText.load(model_path)
     output_path = model_path.replace(".model", ".vec")
-    model.wv.save_word2vec_format(output_path, binary=False)
-
-def eval(model_0_path="outputs/eng_internal_100.vec", 
-         model_1_path="outputs/ang_internal_100.vec", 
-         word="domino"):
-    '''
-    A simple evaluation function to check if the word is in the model and if the embeddings are the same.
-    '''
-    model_0 = KeyedVectors.load_word2vec_format(model_0_path, binary=False)
-    model_1 = KeyedVectors.load_word2vec_format(model_1_path, binary=False)
-    print("Model 0 vocab size:", len(model_0.index_to_key))
-    print("Model 1 vocab size:", len(model_1.index_to_key))
-    if word in model_0.index_to_key:
-        print(word + " in model 0")
-        print(model_0.key_to_index[word])
-    if word in model_1.index_to_key:
-        print(word + " in model 1")
-        print(model_1.key_to_index[word])
-    if word in model_0.index_to_key and word in model_1.index_to_key:
-        print(np.allclose(model_0[word], model_1[word], atol=1e-5))
-
-    
+    model.wv.save_word2vec_format(output_path, binary=False)    
     
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Train and evaluate FastText embeddings.')
