@@ -35,7 +35,6 @@ def train_fasttext(file_path="inputs/AllStandText",
         'max_n': 5, 
         'bucket': 2000000, 
     }
-
     corpus = list(tqdm(read_corpus(file_path), desc="Reading Corpus"))
     model = FastText(corpus, **params)
 
@@ -124,5 +123,3 @@ if __name__ == "__main__":
         mp1, mp2 = run_external(vecsize=args.vecsize)
     convert_to_vec(mp1)
     convert_to_vec(mp2)
-
-

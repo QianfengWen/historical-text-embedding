@@ -1,13 +1,67 @@
-# historical-text-embedding
+# Diachronic Embeddings for Medieval Latin
 
-Standardization usage
+This project is dedicated to adapting various models, such as FastText and BERT, for Medieval Latin corpora, and evaluating their performance through both extrinsic and intrinsic methods.
 
-For standardizing Anglo-Saxon period corpora
+## Setup
+
+## Usage
+
+The project includes the training and adaptation of models, evaluation of model performance, and a example semantic change detection analysis.
+
+### Standardization
+
+For standardizing Anglo-Saxon period corpora:
+
 ```bash
 python code/standardization.py -i data/AngOrdtext -d result/AngDict -o result/AngStandText
 ```
 
-For static model, use `--internal` for internal embedding.
+### Adapt Models and Extract Embeddings
+
+#### FastText Embeddings
+
+For FastText model adaptation and embedding extraction: use `--internal` for internal embedding.
+
 ```bash
 python code/skipgram_embeddings.py --vecsize 300 --epochs 50 --internal
 ```
+
+#### Adapt BERT Models
+
+To adapt BERT for your medieval Latin corpus, use the `runner.py` script in `code/bert`:
+
+- **Adapt BERT with an existing tokenizer and model:**
+    ```bash
+    python code/bert/runner.py -i path/to/corpus.txt -o path/to/output
+    ```
+
+- **Adapt BERT with tokenizer training:**
+    ```bash
+    python code/bert/runner.py -i path/to/corpus.txt -o path/to/output --train_tokenizer
+    ```
+
+- **Pretrain BERT from scratch:**
+    ```bash
+    python code/bert/runner.py -i path/to/corpus.txt -o path/to/output --pretrain
+    ```
+- **Extract word embeddings from BERT models:**
+  ```bash
+  python code/bert/extract_embeddings.py -t /path/to/pretrained/tokenizer -m /path/to/pretrained/models -c /path/to/corpus/files -o /path/to/save/embeddings
+  ```
+
+### Evaluate Models
+
+#### Extrinsic Evaluations through Text Classification
+
+To extrinsically evaluate models on text classification tasks, use the `text_classification.py` script located in `code/evaluation`. Ensure the corpus and corresponding labels are aligned and of the same length.
+
+
+--**Evaluate all files from a metadata directory:**--
+  ```bash
+  python code/evaluation/text_classification.py -m path/to/model -c path/to/corpus.txt -ld path/to/label_dir -o path/to/output
+  ```
+
+--**Evaluate a single metadata file:**--
+  ```bash
+  python code/evaluation/text_classification.py -m path/to/model -c path/to/corpus.txt -ld path/to/label_dir -o path/to/output -l specific_label_file_name.txt
+  ```
