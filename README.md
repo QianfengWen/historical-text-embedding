@@ -1,67 +1,78 @@
-# Diachronic Embeddings for Medieval Latin
+# Diachronic Embeddings for Medieval Latin Charters
 
-This project is dedicated to adapting various models, such as FastText and BERT, for Medieval Latin corpora, and evaluating their performance through both extrinsic and intrinsic methods.
+This project is dedicated to evaluating various embedding methods for Medieval Latin charters in Norman Conquest period to better understand the social and cultural change during that time.
+
+Paper available at [[Paper]](diachronic_word_embeddings_for_medieval_Latin.pdf)
 
 ## Setup
 
+### Installing Required Packages
+
+To install the required packages for this project, run the following command:
+
+```bash
+pip install -r requirements.txt
+```
+
+### Accessing Data
+The data used in this project is not publicly available. If you need access to the relevant data, please contact the author at [yifanliu.liu@mail.utoronto.ca](mailto:yifanliu.liu@mail.utoronto.ca).
+
+### Organizing Data Files
+
+Please ensure that your data folders are organized as follows:
+
+- `data/`
+  - `corpus/`
+  - `metadata/`
+    - `ang/` (metadata for Anglo-Saxon charters)
+    - `eng/` (metadata for Norman charters)
+
+
 ## Usage
 
-The project includes the training and adaptation of models, evaluation of model performance, and a example semantic change detection analysis.
+The project includes the training and adaptation of models, evaluation of model performance, and a semantic change detection application.
 
 ### Standardization
 
-For standardizing Anglo-Saxon period corpora:
+For standardizing Anglo-Saxon period corpora, run the following comment:
 
 ```bash
-python code/standardization.py -i data/AngOrdtext -d result/AngDict -o result/AngStandText
+python code/data_preprocessing/standardization.py -i path/to/your/data -d path/to/your/standerdization/dict -o path/to/your/result
 ```
 
-### Adapt Models and Extract Embeddings
+### Models
 
 #### FastText Embeddings
 
-For FastText model adaptation and embedding extraction: use `--internal` for internal embedding.
+The default setup uses external initialization with pre-trained FastText vectors (available at [FastText Crawl Vectors](https://fasttext.cc/docs/en/crawl-vectors.html)). Use `--internal` for internal initialization.
 
 ```bash
-python code/skipgram_embeddings.py --vecsize 300 --epochs 50 --internal
+python code/static/fasttext_embeddings.py --vecsize <hidden_size> --epochs <num_epochs> [--internal]
 ```
 
-#### Adapt BERT Models
+#### BERT Embeddings
 
-To adapt BERT for your medieval Latin corpus, use the `runner.py` script in `code/bert`:
+- **Train BERT models:**
+The default setup uses fine-tuning method using a specified model (`-m`) and a pre-trained tokenizer (`-t`). Use the `--pretrain` flag to train the model from scratch and `--train_tokenizer` to train a new tokenizer.
 
-- **Adapt BERT with an existing tokenizer and model:**
-    ```bash
-    python code/bert/runner.py -i path/to/corpus.txt -o path/to/output
-    ```
-
-- **Adapt BERT with tokenizer training:**
-    ```bash
-    python code/bert/runner.py -i path/to/corpus.txt -o path/to/output --train_tokenizer
-    ```
-
-- **Pretrain BERT from scratch:**
-    ```bash
-    python code/bert/runner.py -i path/to/corpus.txt -o path/to/output --pretrain
-    ```
-- **Extract word embeddings from BERT models:**
   ```bash
-  python code/bert/extract_embeddings.py -t /path/to/pretrained/tokenizer -m /path/to/pretrained/models -c /path/to/corpus/files -o /path/to/save/embeddings
+  python code/bert/runner.py -i path/to/corpus.txt -o path/to/output [-m path/to/your/base/model] -t path/to/your/tokenizer [--pretrain] [--train_tokenizer]
+  ```
+
+- **Extract word embeddings from BERT models:**
+By default, embeddings are aggregated using the `mean` method. To use `max` or `min` aggregation, specify it with the `-a` option.
+
+  ```bash
+  python code/bert/extract_embeddings.py -t /path/to/pretrained/tokenizer -m /path/to/pretrained/models -c /path/to/corpus/files -o /path/to/save/embeddings [-a aggregation/method]
+
   ```
 
 ### Evaluate Models
 
 #### Extrinsic Evaluations through Text Classification
 
-To extrinsically evaluate models on text classification tasks, use the `text_classification.py` script located in `code/evaluation`. Ensure the corpus and corresponding labels are aligned and of the same length.
+The default setup processes all metadata in the corresponding folder. To evaluate using a specific label, include the `-l` option to specify the file name.
 
-
---**Evaluate all files from a metadata directory:**--
   ```bash
-  python code/evaluation/text_classification.py -m path/to/model -c path/to/corpus.txt -ld path/to/label_dir -o path/to/output
-  ```
-
---**Evaluate a single metadata file:**--
-  ```bash
-  python code/evaluation/text_classification.py -m path/to/model -c path/to/corpus.txt -ld path/to/label_dir -o path/to/output -l specific_label_file_name.txt
+  python code/evaluation/text_classification.py -m path/to/model -c path/to/corpus.txt -ld path/to/label_dir -o path/to/output [-l specific_label_file_name.txt]
   ```
