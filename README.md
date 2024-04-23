@@ -1,6 +1,6 @@
 # Diachronic Embeddings for Medieval Latin Charters
 
-This project is dedicated to evaluating various embedding methods for Medieval Latin charters in Norman Conquest period to better understand the social and cultural change during that time.
+This project applies various embedding methods to Medieval Latin charters from the Norman Conquest period to analyze social and cultural changes during this era through a computational linguistic lens.
 
 Paper available at [[Paper]](diachronic_word_embeddings_for_medieval_Latin.pdf)
 
