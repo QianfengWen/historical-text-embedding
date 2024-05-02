@@ -4,10 +4,7 @@ from tqdm import tqdm
 from transformers import BertModel, BertTokenizerFast
 import torch
 import numpy as np
-from ..utils import *
-
-corpus_name_reference = {"AngText": "ang", "EngText": "eng"}
-agg_method_lst = ["mean", "min", "max"]
+from code.utils import *
 
 def save_embeddings(file_path, word_embeddings):
     """
@@ -30,7 +27,7 @@ def save_embeddings(file_path, word_embeddings):
             file.write(f"{word} {embedding_str}\n")
 
 
-def seq_to_token_embeddings(corpus, model, tokenizer, device, agg_method):
+def seq_to_token_embeddings(corpus, model, tokenizer, device):
     """
     Computes and returns the average token embeddings for each unique word in a corpus.
 
@@ -38,7 +35,6 @@ def seq_to_token_embeddings(corpus, model, tokenizer, device, agg_method):
     :param model: The model used to compute token embeddings, expected to return hidden states.
     :param tokenizer: The tokenizer corresponding to 'model' used for tokenizing sentences.
     :param device: The device on which the model computations are performed ('cuda' or 'cpu').
-    :param agg_method: The method used to calculate the result of the word embedding over all sentences.
     :return: A dictionary mapping each unique word to its average embedding vector.
     """
     word_embeddings_sum = {}
@@ -81,16 +77,12 @@ def seq_to_token_embeddings(corpus, model, tokenizer, device, agg_method):
 
     # calculate the average embedding for each word
     word_embeddings_sum = {word: word_embeddings_sum[word] for word in word_embeddings_sum if len(word_embeddings_sum[word]) >= 5}
-    if agg_method == "mean":
-        word_embeddings_result = {word: np.mean(np.array(word_embeddings_sum[word]),axis=0) for word in word_embeddings_sum}
-    elif agg_method == "min":
-        word_embeddings_result = {word: np.min(np.array(word_embeddings_sum[word]), axis=0) for word in word_embeddings_sum}
-    elif agg_method == "max":
-        word_embeddings_result = {word: np.max(np.array(word_embeddings_sum[word]), axis=0) for word in word_embeddings_sum}
+    word_embeddings_result = {word: np.mean(np.array(word_embeddings_sum[word]),axis=0) for word in word_embeddings_sum}
+
     return word_embeddings_result
 
 
-def get_word_embeddings(corpus_dir, output_dir, model_dir, tokenizer_dir, agg_method="mean"):
+def get_word_embeddings(corpus_dir, output_dir, model_dir, tokenizer_dir):
     """
     Extracts and saves word embeddings for each corpus using specified models.
 
@@ -98,7 +90,6 @@ def get_word_embeddings(corpus_dir, output_dir, model_dir, tokenizer_dir, agg_me
     :param output_dir: Directory where the computed word embeddings will be saved.
     :param model_dir: Directory containing the pre-trained model files.
     :param tokenizer_dir: Directory containing the tokenizer files.
-    :param agg_method: The method used to calculate the result of the word embedding over all sentences.
     """
     if torch.cuda.is_available():
         device = torch.device("cuda")
@@ -120,7 +111,6 @@ def get_word_embeddings(corpus_dir, output_dir, model_dir, tokenizer_dir, agg_me
         corpus = list(read_corpus(corpus_path))
         corpus = [chunk for doc in corpus for chunk in chunk_text(doc, tokenizer)]
         corpus_name = os.path.basename(corpus_path).split(".")[0]
-        prefix = corpus_name_reference[corpus_name]
         for model_path in model_path_lst:
             model_name = os.path.basename(model_path).split(".")[0]
             model = BertModel.from_pretrained(
@@ -131,11 +121,11 @@ def get_word_embeddings(corpus_dir, output_dir, model_dir, tokenizer_dir, agg_me
             # get word embeddings
             print(f"processing inputs from {corpus_name} using {model_name} ...")
             word_embeddings_avg = seq_to_token_embeddings(
-                tokenizer=tokenizer, model=model, corpus=corpus, device=device, agg_method=agg_method
+                tokenizer=tokenizer, model=model, corpus=corpus, device=device
             )
             # save word embeddings
             model_save_path = os.path.join(
-                output_dir, f"{prefix}_{model_name}_{agg_method}.vec"
+                output_dir, f"{corpus_name}_{model_name}.vec"
             )
             save_embeddings(model_save_path, word_embeddings_avg)
             print(f"model saved to {output_dir}")
@@ -147,7 +137,6 @@ if __name__ == "__main__":
     parser.add_argument("-m", "--model_dir", type=str, required=True, help="Directory containing pretrained BERT models.")
     parser.add_argument("-c", "--corpus_dir", type=str, required=True, help="Directory containing corpus files.")
     parser.add_argument("-o", "--output_dir", type=str, required=True, help="Directory to save the extracted embeddings.")
-    parser.add_argument("-a", "--agg_method", type=str, default="mean", help="Method used to find word embedding over all sentences")
 
     args = parser.parse_args()
 
@@ -160,8 +149,6 @@ if __name__ == "__main__":
     if not os.path.exists(args.corpus_dir):
         raise ValueError(f"Corpus directory does not exist: {args.corpus_dir}")
     
-    if args.agg_method not in agg_method_lst:
-        raise ValueError(f"Aggregation method not support: {args.agg_method}")
     os.makedirs(args.output_dir, exist_ok=True)
     
-    get_word_embeddings(args.corpus_dir, args.output_dir, args.model_dir, args.tokenizer_dir, args.agg_method)
+    get_word_embeddings(args.corpus_dir, args.output_dir, args.model_dir, args.tokenizer_dir)

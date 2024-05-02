@@ -2,7 +2,7 @@ import os
 from transformers import BertConfig, BertForMaskedLM, BertTokenizerFast, DataCollatorForLanguageModeling, Trainer, TrainingArguments
 from datasets import Dataset
 
-from ..utils import *
+from code.utils import *
 
 
 def train(model, output_path, data_collator, dataset, epochs):
@@ -78,8 +78,7 @@ def train_BERT(model_name, input_file, tokenizer_path, output_dir, is_pretrainin
         # pre-train BERT from scratch
         config = BertConfig(
             vocab_size=32_000,
-            # hidden_size=768,
-            hidden_size=300,
+            hidden_size=768,
             num_hidden_layers=12,
             num_attention_heads=12,
             max_position_embeddings=512,
@@ -88,7 +87,7 @@ def train_BERT(model_name, input_file, tokenizer_path, output_dir, is_pretrainin
         model = BertForMaskedLM(config=config)
         # model_path = os.path.join(output_dir, "pretrained-bert")
         model_path = os.path.join(output_dir, "pretrained-bert-300")
-        train(model, output_path=model_path, data_collator=data_collator, dataset=dataset, epochs=10)
+        train(model, output_path=model_path, data_collator=data_collator, dataset=dataset, epochs=20)
 
     else:
         # fine-tune BERT model
@@ -104,5 +103,5 @@ def train_BERT(model_name, input_file, tokenizer_path, output_dir, is_pretrainin
         # define the output path to save model
         format_model_name = model_name.replace("/", "-")
         model_path = os.path.join(output_dir, f"fine-tuned-bert-{format_model_name}")
-        train(model, output_path=model_path, data_collator=data_collator, dataset=dataset, epochs=4)
+        train(model, output_path=model_path, data_collator=data_collator, dataset=dataset, epochs=20)
 

@@ -1,6 +1,6 @@
 import os, json
 from tokenizers import BertWordPieceTokenizer
-from ..utils import *
+from code.utils import *
 
 def train_tokenizer(input_file, tokenizer_path):
     """
