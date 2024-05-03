@@ -1,6 +1,17 @@
 import os, random, argparse
 from code.utils import *
 
+def read_corpus(file_path):
+    """
+    Yield sentences from a corpus file.
+    
+    :param file_path: Path to the corpus file.
+    :return: Yields lists of words in each line.
+    """
+    with open(file_path) as f:
+        for line in f:
+            yield line.strip()
+
 def combine_corpus(ang_path, eng_path):
     """
     Combines 'ang' and 'eng' corpora into a single list of labeled documents.
@@ -85,9 +96,9 @@ def generate_data(ang_path, eng_path, corpus_path, repeat=50):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Generate random datasets from text corpora.')
-    parser.add_argument('ang_path', type=str, help='Path to the ang corpus file.')
-    parser.add_argument('eng_path', type=str, help='Path to the eng corpus file.')
-    parser.add_argument('corpus_path', type=str, help='Path to save the generated data files.')
+    parser.add_argument('-a', '--ang_path', type=str, help='Path to the ang corpus file.')
+    parser.add_argument('-e', '--eng_path', type=str, help='Path to the eng corpus file.')
+    parser.add_argument('-c', '--corpus_path', type=str, help='Path to save the generated data files.')
     parser.add_argument('--repeat', type=int, default=50, help='Number of repetitions for data generation.')
     
     args = parser.parse_args()
