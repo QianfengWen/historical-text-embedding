@@ -27,13 +27,14 @@ def save_embeddings(file_path, word_embeddings):
             file.write(f"{word} {embedding_str}\n")
 
 
-def seq_to_token_embeddings(corpus, model, tokenizer, device):
+def seq_to_token_embeddings(corpus, model, tokenizer, vocab, device):
     """
     Computes and returns the average token embeddings for each unique word in a corpus.
 
     :param corpus: A list of sentences to process.
     :param model: The model used to compute token embeddings, expected to return hidden states.
     :param tokenizer: The tokenizer corresponding to 'model' used for tokenizing sentences.
+    :param vocab: A set of vocab.
     :param device: The device on which the model computations are performed ('cuda' or 'cpu').
     :return: A dictionary mapping each unique word to its average embedding vector.
     """
@@ -69,9 +70,10 @@ def seq_to_token_embeddings(corpus, model, tokenizer, device):
                     word_embedding = np.array(word_embedding).mean(axis=0)
 
                     #already find the word
-                    if word not in word_embeddings_sum:
-                      word_embeddings_sum[word] = []
-                    word_embeddings_sum[word].append(word_embedding)
+                    if word in vocab:
+                        if word not in word_embeddings_sum:
+                            word_embeddings_sum[word] = []
+                        word_embeddings_sum[word].append(word_embedding)
                     word = ""
                     word_embedding = []
 
@@ -82,7 +84,7 @@ def seq_to_token_embeddings(corpus, model, tokenizer, device):
     return word_embeddings_result
 
 
-def get_word_embeddings(corpus_dir, output_dir, model_dir, tokenizer_dir):
+def get_word_embeddings(corpus_dir, output_dir, model_dir, tokenizer_dir, vocab_path):
     """
     Extracts and saves word embeddings for each corpus using specified models.
 
@@ -90,6 +92,7 @@ def get_word_embeddings(corpus_dir, output_dir, model_dir, tokenizer_dir):
     :param output_dir: Directory where the computed word embeddings will be saved.
     :param model_dir: Directory containing the pre-trained model files.
     :param tokenizer_dir: Directory containing the tokenizer files.
+    :param vocab_path: File containing the vocab.
     """
     if torch.cuda.is_available():
         device = torch.device("cuda")
@@ -99,6 +102,10 @@ def get_word_embeddings(corpus_dir, output_dir, model_dir, tokenizer_dir):
     else:
         print("No GPU available, using the CPU instead.")
         device = torch.device("cpu")
+    
+    # load vocab
+    with open(vocab_path) as f:
+        vocab = set(f.readlines())
     
     # load tokenizer
     print("loading tokenizer...")
@@ -110,9 +117,9 @@ def get_word_embeddings(corpus_dir, output_dir, model_dir, tokenizer_dir):
     for corpus_path in corpus_path_lst:
         corpus = list(read_corpus(corpus_path))
         corpus = [chunk for doc in corpus for chunk in chunk_text(doc, tokenizer)]
-        corpus_name = os.path.basename(corpus_path).split(".")[0]
+        corpus_name = os.path.basename(corpus_path).split(".")[0].lower()
         for model_path in model_path_lst:
-            model_name = os.path.basename(model_path).split(".")[0]
+            model_name = os.path.basename(model_path).split(".")[0].lower()
             model = BertModel.from_pretrained(
                 model_path, output_hidden_states=True
             ) 
@@ -121,7 +128,7 @@ def get_word_embeddings(corpus_dir, output_dir, model_dir, tokenizer_dir):
             # get word embeddings
             print(f"processing inputs from {corpus_name} using {model_name} ...")
             word_embeddings_avg = seq_to_token_embeddings(
-                tokenizer=tokenizer, model=model, corpus=corpus, device=device
+                tokenizer=tokenizer, model=model, corpus=corpus, device=device, vocab=vocab
             )
             # save word embeddings
             model_save_path = os.path.join(
@@ -137,6 +144,8 @@ if __name__ == "__main__":
     parser.add_argument("-m", "--model_dir", type=str, required=True, help="Directory containing pretrained BERT models.")
     parser.add_argument("-c", "--corpus_dir", type=str, required=True, help="Directory containing corpus files.")
     parser.add_argument("-o", "--output_dir", type=str, required=True, help="Directory to save the extracted embeddings.")
+    parser.add_argument("-v", "--vocab_path", type=str, required=True, help="File containing vocab.")
+
 
     args = parser.parse_args()
 
@@ -149,6 +158,9 @@ if __name__ == "__main__":
     if not os.path.exists(args.corpus_dir):
         raise ValueError(f"Corpus directory does not exist: {args.corpus_dir}")
     
+    if not os.path.exists(args.vocab_path):
+        raise ValueError(f"Vocab file does not exist: {args.vocab_path}")
+    
     os.makedirs(args.output_dir, exist_ok=True)
     
-    get_word_embeddings(args.corpus_dir, args.output_dir, args.model_dir, args.tokenizer_dir)
+    get_word_embeddings(args.corpus_dir, args.output_dir, args.model_dir, args.tokenizer_dir, args.vocab_path)
