@@ -1,24 +1,12 @@
+from code.utils import *
+
 from statsmodels.stats.proportion import proportions_ztest
 from collections import Counter
-
-def read_time(time_path):
-    """Generator to read dates from a file."""
-    with open(time_path) as f_t:
-        for line in f_t:
-            dates = line.split()
-            for date in dates:
-                yield int(date)
-
-def read_corpus(corpus_path):
-    """Generator to read lines from a text corpus."""
-    with open(corpus_path) as f_c:
-        for line in f_c:
-            yield line.strip() 
 
 def filter_date(corpus_path, time_path, new_corpus_path, start_date, end_date):
     """Filters a text corpus based on date range and writes the filtered corpus to a new file."""
     dates = read_time(time_path)
-    corpus = read_corpus(corpus_path)
+    corpus = read_corpus_no_split(corpus_path)
 
     with open(new_corpus_path, "w") as f:
         for doc, date in zip(corpus, dates):
@@ -32,12 +20,12 @@ def build_counter(ang_path, eng_path):
     eng_counter = Counter()
     
     # read and count words in ang_path
-    for line in read_corpus(ang_path):
+    for line in read_corpus_no_split(ang_path):
         words = line.split()  
         ang_counter.update(words)
     
     # read and count words in eng_path
-    for line in read_corpus(eng_path):
+    for line in read_corpus_no_split(eng_path):
         words = line.split()  
         eng_counter.update(words)
     
@@ -68,7 +56,7 @@ def create_word_sets(ang_path, eng_path, words_path):
         for word in word_set:
             f.write(f"{word}\n")
 
-    with open(f"{words_path}_stats", "w") as f:
+    with open(f"stats_{words_path}", "w") as f:
         for word in word_set:
             ang_count = ang_counter.get(word, 0)
             eng_count = eng_counter.get(word, 0)
@@ -85,19 +73,19 @@ def create_word_sets(ang_path, eng_path, words_path):
 
     
 if __name__ == "__main__":
-    ang_path = "data/corpus/AngText"
-    eng_path = "data/corpus/EngText"
+    ang_path = "data/AngText"
+    eng_path = "data/EngText"
     vocab_path = "data/vocab.txt"
 
-    # ang_time_path = "data/AngOrdDate"
-    # eng_time_path = "data/EngOrdDate"
+    ang_time_path = "data/AngOrdDate"
+    eng_time_path = "data/EngOrdDate"
 
-    # filtered_ang_path = "data/date_corpus/AngText"
-    # filtered_eng_path = "data/date_corpus/EngText"
+    filtered_ang_path = "data/corpus/AngText"
+    filtered_eng_path = "data/corpus/EngText"
 
     # filter_date(ang_path, ang_time_path, filtered_ang_path, 800, 1066)
     # filter_date(eng_path, eng_time_path, filtered_eng_path, 1066, 1220)
 
-    create_word_sets(ang_path, eng_path, vocab_path)
+    create_word_sets(filtered_ang_path, filtered_eng_path, vocab_path)
 
     

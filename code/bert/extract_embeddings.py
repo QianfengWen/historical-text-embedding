@@ -104,9 +104,12 @@ def get_word_embeddings(corpus_dir, output_dir, model_dir, tokenizer_dir, vocab_
         device = torch.device("cpu")
     
     # load vocab
+    vocab = set()
     with open(vocab_path) as f:
-        vocab = set(f.readlines())
-    
+        for line in f:
+            vocab.add(line.strip())
+    print(f"vocab length: {len(vocab)}")
+        
     # load tokenizer
     print("loading tokenizer...")
     tokenizer = BertTokenizerFast.from_pretrained(tokenizer_dir)

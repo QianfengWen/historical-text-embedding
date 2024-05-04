@@ -1,17 +1,6 @@
 import os, random, argparse
 from code.utils import *
 
-def read_corpus(file_path):
-    """
-    Yield sentences from a corpus file.
-    
-    :param file_path: Path to the corpus file.
-    :return: Yields lists of words in each line.
-    """
-    with open(file_path) as f:
-        for line in f:
-            yield line.strip()
-
 def combine_corpus(ang_path, eng_path):
     """
     Combines 'ang' and 'eng' corpora into a single list of labeled documents.
@@ -19,8 +8,8 @@ def combine_corpus(ang_path, eng_path):
     :param ang_path: Path to the 'ang' corpus file.
     :param eng_path: Path to the 'eng' corpus file.
     """
-    ang = list(read_corpus(ang_path))
-    eng = list(read_corpus(eng_path))
+    ang = list(read_corpus_no_split(ang_path))
+    eng = list(read_corpus_no_split(eng_path))
 
     ang = [(doc, "ang") for doc in ang]
     eng = [(doc, "eng") for doc in eng]

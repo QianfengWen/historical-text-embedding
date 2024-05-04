@@ -11,6 +11,27 @@ def read_corpus(file_path):
         for line in f:
             yield line.strip().split()
 
+            
+def read_time(time_path):
+    """Generator to read dates from a file."""
+    with open(time_path) as f_t:
+        for line in f_t:
+            dates = line.split()
+            for date in dates:
+                yield int(date)
+
+
+def read_corpus_no_split(file_path):
+    """
+    Generator that yields sentences from a corpus file.
+    
+    :param file_path: Path to the corpus file.
+    :return: Yields lists of words in each line.
+    """
+    with open(file_path) as f:
+        for line in f:
+            yield line.strip()
+
 
 def chunk_text(text, tokenizer, max_length=512):
     """
