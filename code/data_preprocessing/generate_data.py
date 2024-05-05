@@ -3,7 +3,7 @@ from code.utils import *
 
 def combine_corpus(ang_path, eng_path):
     """
-    Combines 'ang' and 'eng' corpora into a single list of labeled documents.
+    Combines corpora into a single list of documents.
 
     :param ang_path: Path to the 'ang' corpus file.
     :param eng_path: Path to the 'eng' corpus file.
@@ -11,35 +11,29 @@ def combine_corpus(ang_path, eng_path):
     ang = list(read_corpus_no_split(ang_path))
     eng = list(read_corpus_no_split(eng_path))
 
-    ang = [(doc, "ang") for doc in ang]
-    eng = [(doc, "eng") for doc in eng]
     combined = ang + eng
+    ratio = len(ang) / len(combined)
 
-    return combined
+    return combined, ratio
 
 
 def split_corpus(combined_corpus, seed, split_ratio):
     """
     Splits the combined corpus into two subsets, maintaining the specified label ratio.
 
-    :param combined_corpus: List of tuples (document, label) representing the combined corpus.
+    :param combined_corpus: List of texts representing the combined corpus.
     :param seed: Random seed for reproducibility.
     :param split_ratio: Ratio of the 'ang' data in the first subset.
     """
     random.seed(seed)
     random.shuffle(combined_corpus)
 
-    # separate the data by label
-    ang_data = [item[0] for item in combined_corpus if item[1] == "ang"]
-    eng_data = [item[0] for item in combined_corpus if item[1] == "eng"]
-
     # calculate split indices
-    ang_split_idx = int(len(ang_data) * split_ratio)
-    eng_split_idx = int(len(eng_data) * split_ratio)
+    split_idx = int(len(combined_corpus) * split_ratio)
 
     # create the subsets
-    subset1 = ang_data[:ang_split_idx] + eng_data[:eng_split_idx]
-    subset2 = ang_data[ang_split_idx:] + eng_data[eng_split_idx:]
+    subset1 = combined_corpus[:split_idx]
+    subset2 = combined_corpus[split_idx:]
     random.shuffle(subset1)
     random.shuffle(subset2)
 
@@ -55,11 +49,7 @@ def generate_data(ang_path, eng_path, corpus_path, repeat=50):
     :param corpus_path: Path to save the generated data files.
     :param repeat: Number of times to repeat the data generation.
     """
-    combined = combine_corpus(ang_path=ang_path, eng_path=eng_path)
-    
-    # calculate the ratio of 'ang' in the combined data
-    num_ang = sum(1 for _, label in combined if label == "ang")
-    split_ratio = num_ang / len(combined)
+    combined, split_ratio = combine_corpus(ang_path=ang_path, eng_path=eng_path)
     
     # repeat data generation
     for i in range(repeat):

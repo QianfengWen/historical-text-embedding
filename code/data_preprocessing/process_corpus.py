@@ -46,8 +46,8 @@ def create_word_sets(ang_path, eng_path, words_path):
     ang_rel_freq = compute_rel_freq(ang_counter, ang_total)
     eng_rel_freq = compute_rel_freq(eng_counter, eng_total)
 
-    ang_set = {word for word, freq in ang_rel_freq.items() if freq >= 0.0002}
-    eng_set = {word for word, freq in eng_rel_freq.items() if freq >= 0.0002}
+    ang_set = {word for word, freq in ang_rel_freq.items() if freq >= 0.0001}
+    eng_set = {word for word, freq in eng_rel_freq.items() if freq >= 0.0001}
 
     # find the intersection of words in both sets
     word_set = ang_set.intersection(eng_set)
@@ -56,7 +56,7 @@ def create_word_sets(ang_path, eng_path, words_path):
         for word in word_set:
             f.write(f"{word}\n")
 
-    with open(f"stats_{words_path}", "w") as f:
+    with open(f"data/vocab_stats.txt", "w") as f:
         for word in word_set:
             ang_count = ang_counter.get(word, 0)
             eng_count = eng_counter.get(word, 0)
@@ -83,9 +83,7 @@ if __name__ == "__main__":
     filtered_ang_path = "data/corpus/AngText"
     filtered_eng_path = "data/corpus/EngText"
 
-    # filter_date(ang_path, ang_time_path, filtered_ang_path, 800, 1066)
-    # filter_date(eng_path, eng_time_path, filtered_eng_path, 1066, 1220)
+    filter_date(ang_path, ang_time_path, filtered_ang_path, 800, 1066)
+    filter_date(eng_path, eng_time_path, filtered_eng_path, 1066, 1198)
 
     create_word_sets(filtered_ang_path, filtered_eng_path, vocab_path)
-
-    
