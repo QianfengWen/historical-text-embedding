@@ -1,44 +1,43 @@
 import os, random, argparse
 from code.utils import *
 
-def combine_corpus(ang_path, eng_path):
-    """
-    Combines corpora into a single list of documents.
+# def combine_corpus(ang_path, eng_path):
+#     """
+#     Combines corpora into a single list of documents.
 
-    :param ang_path: Path to the 'ang' corpus file.
-    :param eng_path: Path to the 'eng' corpus file.
-    """
-    ang = list(read_corpus_no_split(ang_path))
-    eng = list(read_corpus_no_split(eng_path))
+#     :param ang_path: Path to the 'ang' corpus file.
+#     :param eng_path: Path to the 'eng' corpus file.
+#     """
+#     ang = list(read_corpus_no_split(ang_path))
+#     eng = list(read_corpus_no_split(eng_path))
 
-    combined = ang + eng
-    ratio = len(ang) / len(combined)
+#     combined = ang + eng
+#     ratio = len(ang) / len(combined)
 
-    return combined, ratio
+#     return combined, ratio
 
 
-def split_corpus(combined_corpus, seed, split_ratio):
-    """
-    Splits the combined corpus into two subsets, maintaining the specified label ratio.
+# def split_corpus(combined_corpus, seed, split_ratio):
+#     """
+#     Splits the combined corpus into two subsets, maintaining the specified label ratio.
 
-    :param combined_corpus: List of texts representing the combined corpus.
-    :param seed: Random seed for reproducibility.
-    :param split_ratio: Ratio of the 'ang' data in the first subset.
-    """
-    random.seed(seed)
-    random.shuffle(combined_corpus)
+#     :param combined_corpus: List of texts representing the combined corpus.
+#     :param seed: Random seed for reproducibility.
+#     :param split_ratio: Ratio of the 'ang' data in the first subset.
+#     """
+#     random.seed(seed)
+#     random.shuffle(combined_corpus)
 
-    # calculate split indices
-    split_idx = int(len(combined_corpus) * split_ratio)
+#     # calculate split indices
+#     split_idx = int(len(combined_corpus) * split_ratio)
 
-    # create the subsets
-    subset1 = combined_corpus[:split_idx]
-    subset2 = combined_corpus[split_idx:]
-    random.shuffle(subset1)
-    random.shuffle(subset2)
+#     # create the subsets
+#     subset1 = combined_corpus[:split_idx]
+#     subset2 = combined_corpus[split_idx:]
+#     random.shuffle(subset1)
+#     random.shuffle(subset2)
 
-    return subset1, subset2
-
+#     return subset1, subset2
 
 def generate_data(ang_path, eng_path, corpus_path, repeat=50):
     """
@@ -46,31 +45,34 @@ def generate_data(ang_path, eng_path, corpus_path, repeat=50):
 
     :param ang_path: Path to the 'ang' corpus file.
     :param eng_path: Path to the 'eng' corpus file.
-    :param corpus_path: Path to save the generated data files.
+    :param corpus_path: Directory to save the generated data files.
     :param repeat: Number of times to repeat the data generation.
     """
-    combined, split_ratio = combine_corpus(ang_path=ang_path, eng_path=eng_path)
+    ang = list(read_corpus_no_split(ang_path))
+    eng = list(read_corpus_no_split(eng_path))
+    combined = ang + eng
+
+    # introduce noise to dataset
+    def modify_corpus(corpus):
+        return [
+            random.choice(combined) if random.random() < 0.5 else doc
+            for doc in corpus
+        ]
     
     # repeat data generation
     for i in range(repeat):
+        random.seed(i)
+        ang_new = modify_corpus(ang)
+        eng_new = modify_corpus(eng)
+
         ang_filename = os.path.join(corpus_path, f"AngRandom{i+1}.txt")
         eng_filename = os.path.join(corpus_path, f"EngRandom{i+1}.txt")
 
-        ang_new, eng_new = split_corpus(combined_corpus=combined, split_ratio=split_ratio, seed=i)
-
         with open(ang_filename, "w") as f_a:
-            for idx, doc in enumerate(ang_new):
-                if idx < len(ang_new) - 1:
-                    f_a.write(f"{doc}\n")
-                else:
-                    f_a.write(f"{doc}")
+            f_a.write("\n".join(ang_new))
         
         with open(eng_filename, "w") as f_e:
-            for idx, doc in enumerate(eng_new):
-                if idx < len(eng_new) - 1:
-                    f_e.write(f"{doc}\n")
-                else:
-                    f_e.write(f"{doc}")
+            f_e.write("\n".join(eng_new))
 
 
 if __name__ == "__main__":

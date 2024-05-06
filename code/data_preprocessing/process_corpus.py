@@ -46,8 +46,8 @@ def create_word_sets(ang_path, eng_path, words_path):
     ang_rel_freq = compute_rel_freq(ang_counter, ang_total)
     eng_rel_freq = compute_rel_freq(eng_counter, eng_total)
 
-    ang_set = {word for word, freq in ang_rel_freq.items() if freq >= 0.0001}
-    eng_set = {word for word, freq in eng_rel_freq.items() if freq >= 0.0001}
+    ang_set = {word for word, freq in ang_rel_freq.items() if freq >= 0.00005}
+    eng_set = {word for word, freq in eng_rel_freq.items() if freq >= 0.00005}
 
     # find the intersection of words in both sets
     word_set = ang_set.intersection(eng_set)
