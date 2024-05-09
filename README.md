@@ -47,7 +47,7 @@ python code/data_preprocessing/standardization.py -i path/to/your/data -d path/t
 The default setup uses external initialization with pre-trained FastText vectors (available at [FastText Crawl Vectors](https://fasttext.cc/docs/en/crawl-vectors.html)). Use `--internal` for internal initialization.
 
 ```bash
-python code/static/fasttext_embeddings.py --vecsize <hidden_size> --epochs <num_epochs> [--internal]
+python code/static/fasttext_embeddings.py --vecsize <hidden_size> [--internal]
 ```
 
 #### BERT Embeddings
