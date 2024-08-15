@@ -87,7 +87,7 @@ def train_BERT(model_name, input_file, tokenizer_path, output_dir, is_pretrainin
         model = BertForMaskedLM(config=config)
         # model_path = os.path.join(output_dir, "pretrained-bert")
         model_path = os.path.join(output_dir, "pretrained-bert-small")
-        train(model, output_path=model_path, data_collator=data_collator, dataset=dataset, epochs=20)
+        train(model, output_path=model_path, data_collator=data_collator, dataset=dataset, epochs=10)
 
     else:
         # fine-tune BERT model
