@@ -78,9 +78,9 @@ def train_BERT(model_name, input_file, tokenizer_path, output_dir, is_pretrainin
         # pre-train BERT from scratch
         config = BertConfig(
             vocab_size=32_000,
-            hidden_size=256,
-            num_hidden_layers=4,
-            num_attention_heads=4,
+            hidden_size=768,
+            num_hidden_layers=12,
+            num_attention_heads=12,
             max_position_embeddings=512,
         )
         print("pre-train BERT model...")
