@@ -103,5 +103,5 @@ def train_BERT(model_name, input_file, tokenizer_path, output_dir, is_pretrainin
         # define the output path to save model
         format_model_name = model_name.replace("/", "-")
         model_path = os.path.join(output_dir, f"fine-tuned-bert-{format_model_name}")
-        train(model, output_path=model_path, data_collator=data_collator, dataset=dataset, epochs=10)
+        train(model, output_path=model_path, data_collator=data_collator, dataset=dataset, epochs=4)
 
