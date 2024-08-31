@@ -85,15 +85,15 @@ def train_BERT(model_name, input_file, tokenizer_path, output_dir, is_pretrainin
         # )
         config = BertConfig(
             vocab_size=32_000,
-            hidden_size=256,
-            num_hidden_layers=4,
-            num_attention_heads=4,
+            hidden_size=512,
+            num_hidden_layers=8,
+            num_attention_heads=8,
             max_position_embeddings=512,
         )
         print("pre-train BERT model...")
         model = BertForMaskedLM(config=config)
         # model_path = os.path.join(output_dir, "pretrained-bert")
-        model_path = os.path.join(output_dir, "pretrained-bert-small")
+        model_path = os.path.join(output_dir, "pretrained-bert-mid")
         train(model, output_path=model_path, data_collator=data_collator, dataset=dataset, epochs=10)
 
     else:
