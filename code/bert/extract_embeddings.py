@@ -6,6 +6,12 @@ import torch
 import numpy as np
 from code.utils import *
 
+def is_single_model_path(folder_path):
+    for file in os.listdir(folder_path):
+        if "config.json" in file:
+            return True
+    return False
+
 def save_embeddings(file_path, word_embeddings):
     """
     Save the word embeddings dictionary to a .vec file.
@@ -116,7 +122,12 @@ def get_word_embeddings(corpus_dir, output_dir, model_dir, tokenizer_dir, vocab_
     
     # load corpora and models
     corpus_path_lst = get_absolute_file_paths(corpus_dir)
-    model_path_lst = get_absolute_file_paths(model_dir)
+
+    if is_single_model_path(model_dir):
+        model_path_lst = [model_dir]
+    else:
+        model_path_lst = get_absolute_file_paths(model_dir)
+    
     for corpus_path in corpus_path_lst:
         corpus = list(read_corpus(corpus_path))
         corpus = [chunk for doc in corpus for chunk in chunk_text(doc, tokenizer)]
