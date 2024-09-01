@@ -8,7 +8,8 @@ from code.utils import *
 
 
 def is_single_model_path(folder_path):
-    print(os.listdir(folder_path))
+    if not os.path.exists(folder_path): # not a local path (could be a hugging face model)
+        return True
     return any("config.json" in file for file in os.listdir(folder_path))
 
 def save_embeddings(file_path, word_embeddings):
