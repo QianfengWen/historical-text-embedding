@@ -15,7 +15,7 @@ pip install -r requirements.txt
 ```
 
 ### Accessing Data
-The data used in this project is not publicly available. If you need access to the relevant data, please contact the author at [yifanliu.liu@mail.utoronto.ca](mailto:yifanliu.liu@mail.utoronto.ca).
+The data used in this project is not publicly available. If you need access to the relevant data, please contact the authors.
 
 ### Organizing Data Files
 
