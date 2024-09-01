@@ -166,8 +166,8 @@ if __name__ == "__main__":
     if not os.path.exists(args.tokenizer_dir):
         raise ValueError(f"Tokenizer directory does not exist: {args.tokenizer_dir}")
 
-    if not os.path.exists(args.model_dir):
-        raise ValueError(f"Model directory does not exist: {args.model_dir}")
+    # if not os.path.exists(args.model_dir):
+    #     raise ValueError(f"Model directory does not exist: {args.model_dir}")
 
     if not os.path.exists(args.corpus_dir):
         raise ValueError(f"Corpus directory does not exist: {args.corpus_dir}")
