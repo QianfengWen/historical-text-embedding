@@ -6,11 +6,9 @@ import torch
 import numpy as np
 from code.utils import *
 
+
 def is_single_model_path(folder_path):
-    for file in os.listdir(folder_path):
-        if "config.json" in file:
-            return True
-    return False
+    return any("config.json" in file for file in os.listdir(folder_path))
 
 def save_embeddings(file_path, word_embeddings):
     """
