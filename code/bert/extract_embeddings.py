@@ -6,6 +6,12 @@ import torch
 import numpy as np
 from code.utils import *
 
+
+def is_single_model_path(folder_path):
+    if not os.path.exists(folder_path): # not a local path (could be a hugging face model)
+        return True
+    return any("config.json" in file for file in os.listdir(folder_path))
+
 def save_embeddings(file_path, word_embeddings):
     """
     Save the word embeddings dictionary to a .vec file.
@@ -116,7 +122,12 @@ def get_word_embeddings(corpus_dir, output_dir, model_dir, tokenizer_dir, vocab_
     
     # load corpora and models
     corpus_path_lst = get_absolute_file_paths(corpus_dir)
-    model_path_lst = get_absolute_file_paths(model_dir)
+
+    if is_single_model_path(model_dir):
+        model_path_lst = [model_dir]
+    else:
+        model_path_lst = get_absolute_file_paths(model_dir)
+    
     for corpus_path in corpus_path_lst:
         corpus = list(read_corpus(corpus_path))
         corpus = [chunk for doc in corpus for chunk in chunk_text(doc, tokenizer)]
@@ -155,8 +166,8 @@ if __name__ == "__main__":
     if not os.path.exists(args.tokenizer_dir):
         raise ValueError(f"Tokenizer directory does not exist: {args.tokenizer_dir}")
 
-    if not os.path.exists(args.model_dir):
-        raise ValueError(f"Model directory does not exist: {args.model_dir}")
+    # if not os.path.exists(args.model_dir):
+    #     raise ValueError(f"Model directory does not exist: {args.model_dir}")
 
     if not os.path.exists(args.corpus_dir):
         raise ValueError(f"Corpus directory does not exist: {args.corpus_dir}")
