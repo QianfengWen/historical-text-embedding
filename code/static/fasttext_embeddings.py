@@ -4,16 +4,11 @@ from tqdm import tqdm
 from gensim.models import KeyedVectors
 import argparse
 
-ang_text_path = "data/AngText"
-eng_text_path = "data/EngText"
-eng2_text_path = "data/EngText2"
-base_text_path = "data/AllText"
+MODE = ["internal", "external", "incremental"]
 pretrained_dir = "pretrained_vec/"
-vocab_path = "data/vocab.txt"
-
 
 def read_corpus(file_path):
-    with open(file_path) as f:
+    with open(file_path, encoding='utf-8', errors='ignore') as f:
         for line in f:
             yield line.strip().split()
 
@@ -45,7 +40,6 @@ def train_fasttext(file_path,
     corpus = list(tqdm(read_corpus(file_path), desc="Reading Corpus"))
     model = FastText(corpus, **params)
 
-    print("model trained")
     merged_model_path = os.path.join(output_dir, model_path)
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
@@ -53,14 +47,16 @@ def train_fasttext(file_path,
     print("model saved")
 
 
-def continue_train(pre_trained_path, 
+def continue_train(pre_trained_path,
                    file_path, 
                    output_dir="outputs/",
-                   model_path="default.model"):
+                   model_path="default.model",
+                   vecsize=300,
+                   continue_epoch=30):
     """
     Continue training the pretrained embedding.
     """
-    continue_epoch = 30
+    # continue_epoch = 30
     print("continue_train")
     if pre_trained_path.endswith('.bin'):
         # pretrained fasttext model is in binary format
@@ -78,59 +74,110 @@ def continue_train(pre_trained_path,
     model.save(merged_model_path)
 
 
-def run_internal(vecsize=300, base_epochs=50):
+def run_internal(vecsize=300, base_epochs=50, continue_epochs=50, period_files=[], base_text_path="data/AllText"):
     '''
     a wrapper function to run training based on all text and then continue training based on ang and eng text.
     '''
     all_model_path = f"all_fasttext_{vecsize}.model"
     output_dir = f"outputs/internal_{vecsize}/"
-    all_pretrained_path = output_dir + all_model_path
-    ang_model_path = f"ang_internal_{vecsize}.model"
-    eng_model_path = f"eng_internal_{vecsize}.model"
-    eng2_model_path = f"eng2_internal_{vecsize}.model"
+    pretrained_path = output_dir + all_model_path
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    print("Training internal")
+    # train the model based on all text
     train_fasttext(file_path=base_text_path, 
-                   output_dir=output_dir, 
-                   model_path=all_model_path, 
-                   vecsize=vecsize, 
-                   epochs=base_epochs)
-    continue_train(pre_trained_path=all_pretrained_path,
-                   file_path=ang_text_path, 
-                   output_dir=output_dir, 
-                   model_path=ang_model_path)
-    continue_train(pre_trained_path=all_pretrained_path,
-                   file_path=eng_text_path, 
-                   output_dir=output_dir, 
-                   model_path=eng_model_path)
-    continue_train(pre_trained_path=all_pretrained_path,
-                     file_path=eng2_text_path, 
-                     output_dir=output_dir, 
-                     model_path=eng2_model_path)
-    return output_dir + ang_model_path, output_dir + eng_model_path, output_dir + eng2_model_path
+                       output_dir=output_dir, 
+                       model_path=all_model_path, 
+                       vecsize=vecsize, 
+                       epochs=base_epochs)
+    print("Training internal done")
+    result_list = []
+    # continue training based on ang and eng text
+    for file in period_files:
+        model_path = file.split("/")[-1].lower() + f"_internal_{vecsize}_{continue_epochs}.model"
+        continue_train(pre_trained_path=pretrained_path,
+                       file_path=file, 
+                       output_dir=output_dir, 
+                       model_path=model_path,
+                       continue_epoch=continue_epochs,
+                       vecsize=vecsize)
+        result_list.append(output_dir + model_path)
+        # update the pretrained path
+        pretrained_path = output_dir + model_path
+    return result_list
     
-def run_external(vecsize=300):
+def run_external(vecsize=300, continue_epochs=50, period_files=[], base_text_path="data/AllText"):
     '''
     a wrapper function to run continue training based on fasttext latin model.
     '''
     pretrained_path = pretrained_dir + f"cc.la.{vecsize}.bin"
     output_dir = f"outputs/external_{vecsize}/"
     base_path = f"base_external_{vecsize}.model"
-    ang_model_path = f"ang_external_{vecsize}.model"
-    eng_model_path = f"eng_external_{vecsize}.model"
-    eng2_model_path = f"eng2_external_{vecsize}.model"
-    continue_train(pre_trained_path=pretrained_path,
-                     file_path=base_text_path, output_dir=output_dir, model_path=base_path)
-    continue_train(pre_trained_path=output_dir + base_path,
-                   file_path=ang_text_path, output_dir=output_dir, model_path=ang_model_path)
-    continue_train(pre_trained_path=output_dir + base_path,
-                   file_path=eng_text_path, output_dir=output_dir, model_path=eng_model_path)
-    continue_train(pre_trained_path=output_dir + base_path,
-                    file_path=eng2_text_path, output_dir=output_dir, model_path=eng2_model_path)
-    return output_dir + ang_model_path, output_dir + eng_model_path, output_dir + eng2_model_path
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
 
-def shrink_to_vec(model_path="outputs/ang_external_300.model", vocab_path = vocab_path):
+    # continue training based on all text
+    continue_train(pre_trained_path=pretrained_path,
+                     file_path=base_text_path, 
+                     output_dir=output_dir, 
+                     model_path=base_path,
+                     continue_epoch=continue_epochs,
+                     vecsize=vecsize)
+    
+    result_list = []
+    # continue training based on ang and eng text
+    # reverse the order of period_files
+    reversed_period_files = period_files[::-1]
+    for file in reversed_period_files:
+        model_path = file.split("/")[-1].lower() + f"_external_{vecsize}_{continue_epochs}.model"
+        continue_train(pre_trained_path=output_dir + base_path,
+                       file_path=file, 
+                       output_dir=output_dir, 
+                       model_path=model_path,
+                       continue_epoch=continue_epochs,
+                       vecsize=vecsize)
+        result_list.append(output_dir + model_path)
+        # update the pretrained path
+        pretrained_path = output_dir + model_path
+    return result_list
+
+def run_incremental(vecsize=300, base_epochs=50, continue_epochs=50, period_files=[], base_text_path="data/AllText"):
+    '''
+    Run incremental training based on the previous period in a reversed order.
+    '''
+    print("Running incremental training")
+    output_dir = f"outputs/incremental_{vecsize}/"
+    # first train the model based on the last period
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    result_list = []
+    print("Training last period")
+    train_fasttext(file_path=period_files[-1], 
+                   output_dir=output_dir, 
+                   model_path=period_files[-1].split("/")[-1].lower() + f"_incremental_{vecsize}_{continue_epochs}.model", 
+                   vecsize=vecsize, 
+                   epochs=continue_epochs)
+    result_list.append(output_dir + period_files[-1].split("/")[-1].lower() + f"_incremental_{vecsize}_{continue_epochs}.model")
+    print("Training last period done")
+    # continue training based on the previous period
+    for i in range(len(period_files) - 2, -1, -1):
+        print(f"Continue training period {i}")
+        model_path = period_files[i].split("/")[-1].lower() + f"_incremental_{vecsize}_{continue_epochs}.model"
+        continue_train(pre_trained_path=result_list[-1],
+                       file_path=period_files[i], 
+                       output_dir=output_dir, 
+                       model_path=model_path,
+                       continue_epoch=continue_epochs,
+                       vecsize=vecsize)
+        result_list.append(output_dir + model_path)
+        print(f"Continue training period {i} done")
+    return result_list
+
+def shrink_to_vec(model_path="outputs/ang_external_300.model", vocab_path = "data/vocab.txt"):
     '''
     Keep the necessary word vectors and convert the model to vec format for evaluation.
     '''
+    print("Shrinking" + model_path)
     model = FastText.load(model_path)
     selected_words = [word for line in list(read_corpus(vocab_path)) for word in line]
     new_model = KeyedVectors(vector_size=model.vector_size)
@@ -138,17 +185,31 @@ def shrink_to_vec(model_path="outputs/ang_external_300.model", vocab_path = voca
         if word in model.wv:
             new_model.add_vector(word, model.wv.get_vector(word))
     output_path = model_path.replace(".model", ".vec")
-    model.wv.save_word2vec_format(output_path, binary=False)    
+    new_model.save_word2vec_format(output_path, binary=False)    
     
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Train and evaluate FastText embeddings.')
     parser.add_argument('--vecsize', type=int, default=300, help='Size of the vector embeddings.')
-    parser.add_argument('--internal', action='store_true', help='Whether to run internal initialization training.')
+    parser.add_argument('--continue_epochs', type=int, default=50, help='Number of epochs for training.')
+    parser.add_argument('--mode', type=str, default='internal', choices=MODE, help='Training mode.')
+    parser.add_argument('--data_folder', type=str, default='data/', help='Folder containing the data.')
     args = parser.parse_args()
-    if args.internal:
-        mp1, mp2, mp3 = run_internal(vecsize=args.vecsize)
-    else:
-        mp1, mp2, mp3 = run_external(vecsize=args.vecsize)
-    shrink_to_vec(mp1)
-    shrink_to_vec(mp2)
-    shrink_to_vec(mp3)
+    base_text_path = args.data_folder + "AllText"
+    vocab_path = args.data_folder + "vocab.txt"
+    print("base_text_path: ", base_text_path)
+    print("vocab_path: ", vocab_path)
+    text_dir = args.data_folder + "periods/"
+    # for each file in period_files, store their path in a list
+    period_files = [text_dir + file for file in os.listdir(text_dir)]
+    mp_list = []
+    if args.mode == "internal":
+        # mp1, mp2, mp3 = run_internal(vecsize=args.vecsize, period_files=period_files, base_text_path=base_text_path)
+        mp_list = run_internal(vecsize=args.vecsize, continue_epochs=args.continue_epochs, period_files=period_files, base_text_path=base_text_path)
+    elif args.mode == "external":
+        # mp1, mp2, mp3 = run_external(vecsize=args.vecsize, period_files=period_files, base_text_path=base_text_path)
+        mp_list = run_external(vecsize=args.vecsize, continue_epochs=args.continue_epochs, period_files=period_files, base_text_path=base_text_path)
+    elif args.mode == "incremental":
+        # mp1, mp2, mp3 = run_incremental(vecsize=args.vecsize, period_files=period_files, base_text_path=base_text_path)
+        mp_list = run_incremental(vecsize=args.vecsize, continue_epochs=args.continue_epochs, period_files=period_files, base_text_path=base_text_path)
+    for mp in mp_list:
+        shrink_to_vec(mp, vocab_path)
