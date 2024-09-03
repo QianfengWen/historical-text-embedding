@@ -17,6 +17,7 @@ pip install -r requirements.txt
 ### Accessing Data
 The Medieval Latin charters used in this project are available in the `data/` folder. Please refer to the [DEEDS website](https://deeds.library.utoronto.ca/content/about-deeds) for more details.
 
+For semantic change labels, please refer to `data/labels/change.txt` for the list of words in the "changed" group and `data/labels/unchange.txt` for the list of words in the "unchanged" group.
 
 
 ## Usage
